@@ -1,11 +1,12 @@
 #pragma config(Hubs,  S1, HTMotor,  HTServo,  HTMotor,  none)
+#pragma config(Sensor, S1,     ,               sensorI2CMuxController)
 #pragma config(Sensor, S2,     pitch,          sensorI2CHiTechnicGyro)
 #pragma config(Sensor, S3,     yaw,            sensorI2CHiTechnicGyro)
-#pragma config(Sensor, S4,     direction,      sensorI2CHiTechnicAccel)
-#pragma config(Motor,  mtr_S1_C1_1,     rightDrive,    tmotorTetrix, openLoop)
-#pragma config(Motor,  mtr_S1_C1_2,     motorE,        tmotorTetrix, openLoop)
-#pragma config(Motor,  mtr_S1_C3_1,     leftDrive,     tmotorTetrix, openLoop, reversed)
-#pragma config(Motor,  mtr_S1_C3_2,     motorG,        tmotorTetrix, openLoop)
+#pragma config(Sensor, S4,     direction,      sensorI2CCustom)
+#pragma config(Motor,  mtr_S1_C1_1,     none,          tmotorTetrix, openLoop)
+#pragma config(Motor,  mtr_S1_C1_2,     rightDrive,    tmotorTetrix, openLoop)
+#pragma config(Motor,  mtr_S1_C3_1,     none,          tmotorTetrix, openLoop)
+#pragma config(Motor,  mtr_S1_C3_2,     leftDrive,     tmotorTetrix, openLoop, reversed)
 #pragma config(Servo,  srvo_S1_C2_1,    servo1,               tServoNone)
 #pragma config(Servo,  srvo_S1_C2_2,    servo2,               tServoNone)
 #pragma config(Servo,  srvo_S1_C2_3,    servo3,               tServoNone)
@@ -17,35 +18,25 @@
 #include "drivers/hitechnic-accelerometer.h"
 #include "drivers/hitechnic-gyro.h";
 task main() {
-	int x = 0;
-	int y = 0;
-	int z = 0;
-	bool offRamp = false;
-	bool downRamp = false;
-	float thetaY = 0;
-	//float thetaX = 0;
-	unsigned int t = 0;
-	//float avgGyroY = 0;
-	//float avgGyroX = 0;
-	HTGYROsetCal(pitch, 0);
+	int x;
+	int y;
+	int z;
+	int originalAccel;
+	bool offRamp;
 	motor[rightDrive] = -50;
 	motor[leftDrive] = -50;
+	wait10Msec(125);
 	HTACreadAllAxes(direction, x, y, z);
+	x += 18;
+  y -= 4;
+  z -= 194;
+  originalAccel = x;
 	while(!offRamp) {
-		t++;
-		wait1Msec(100);
-		thetaY = thetaY + (HTGYROreadRot(pitch) * time1[T1]) / 1000.0;
-		ClearTimer(T1);
-
-		int refY = (int)(thetaY+180)%360 - 180;
-		if (refY > 10) {
-			downRamp = true;
-			PlaySound(soundDownwardTones);
-		}
-		if (downRamp && refY < 5) {
+		int newAccel = HTACreadAllAxes(direction, x, y, z);
+		if ((originalAccel - newAccel) > 50) {
 			offRamp = true;
-			PlaySound(soundBeepBeep);
 		}
 	}
-	StopAllTasks();
+	motor[rightDrive] = 0;
+	motor[leftDrive] = 0;
 }

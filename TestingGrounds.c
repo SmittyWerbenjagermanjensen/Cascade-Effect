@@ -21,6 +21,7 @@ task main() {
 	int x;
 	int y;
 	int z;
+	int waitTime = 0;
 	int originalAccel;
 	bool offRamp;
 	motor[rightDrive] = -50;
@@ -30,12 +31,16 @@ task main() {
 	x += 18;
   y -= 4;
   z -= 194;
-  originalAccel = x;
+  originalAccel = z;
 	while(!offRamp) {
-		int newAccel = HTACreadAllAxes(direction, x, y, z);
-		if ((originalAccel - newAccel) > 50) {
+		motor[rightDrive] = -50;
+		motor[leftDrive] = -50;
+		HTACreadAllAxes(direction, x, y, z);
+		/*if ((abs(originalAccel - z) > 75) || waitTime > 5000) {
 			offRamp = true;
-		}
+		}*/
+		wait1Msec(1);
+		waitTime++;
 	}
 	motor[rightDrive] = 0;
 	motor[leftDrive] = 0;

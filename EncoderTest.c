@@ -16,10 +16,12 @@ task main()
   nMotorEncoder[motorE] = 0;  //clear the TETRIX encoders in motors D and E
   nMotorEncoder[motorD] = 0;
 
-  while (nMotorEncoder[motorE] < 1440) //while the encoder wheel turns one revolution
+  while (nMotorEncoder[motorD] < 1440) //while the encoder wheel turns one revolution
   {
     motor[motorE] = 30; //turn both motors on at 30 percent power
     motor[motorD] = 30;
+    //nxtDisplayCenteredTextLine(5, "%d", nMotorEncoder[motorE]);
+    nxtDisplayCenteredTextLine(6, "%d", nMotorEncoder[motorD]);
   }
 
   motor[motorE] = 0; //turn both motors off

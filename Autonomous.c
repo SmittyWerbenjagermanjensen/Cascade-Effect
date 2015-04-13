@@ -24,7 +24,7 @@
 #include "drivers/hitechnic-accelerometer.h";
 #include "JoystickDriver.c"  //Include file to "handle" the Bluetooth messages.
 
-float thetaX = 0;
+float yaw = 0;
 float avgGyroX = 0;
 bool finished = false;
 
@@ -42,18 +42,21 @@ void calibrateSensors() {
 
 
 float getTheta() {
-	thetaX = thetaX + ((float)SensorValue[yawDetector]-avgGyroX) * time1[T1] / 1000.0;
+	yaw = yaw + ((float)SensorValue[yawDetector]-avgGyroX) * time1[T1] / 1000.0;
 	ClearTimer(T1);
-	return (thetaX);
+	return (yaw);
 }
 
-
-void testForOffRamp() {
-	bool offRamp = false;
-	while (!offRamp) {
-	}
+void forward(int forwardTicks, int speed) {
+	nMotorEncoder[rightDrive] = 0;
+	nMotorEncoder[leftDrive] = 0;
+	nMotorEncoderTarget[rightDrive] = forwardTicks;
+	motor[rightDrive] = speed;
+	motor[leftDrive] = speed;
+	while(nMotorRunState[rightDrive] != runStateIdle) {}
+	motor[rightDrive] = 0;
+	motor[leftDrive] = 0;
 }
-
 
 void initializeRobot()
 {
@@ -62,38 +65,52 @@ void initializeRobot()
 }
 
 
-void autonomous() {
-	motor[rightDrive] = -35;
-  motor[leftDrive] = -35;
-  while (nMotorEncoder[leftDrive] < 10797) {
-  }
-  motor[leftDrive] = 0;
-  motor[rightDrive] = 0;
+void goForward(int dist) { // PRECONDITION: dist > 0
+	nMotorEncoder[leftDrive] = 0;
+	nMotorEncoderTarget[leftDrive] = dist*59.41785; // converts inches to ticks
+	motor[leftDrive] = 100;
+	motor[rightDrive] = 100;
+	while(nMotorRunState[leftDrive] != runStateIdle) {}
+	motor[leftDrive] = 0;
+	motor[rightDrive] = 0;
+}
 
-  wait1Msec(500);
 
-	motor[rightDrive] = -15;
-	motor[leftDrive] = 15;
-	while (getTheta() < 26.565) {
+void goBackward(int dist) { // PRECONDITION: dist > 0
+	nMotorEncoder[leftDrive] = 0;
+	nMotorEncoderTarget[leftDrive] = dist*59.41785; // converts inches to ticks
+	motor[leftDrive] = -100;
+	motor[rightDrive] = -100;
+	while(nMotorRunState[leftDrive] != runStateIdle) {}
+	motor[leftDrive] = 0;
+	motor[rightDrive] = 0;
+}
+
+
+void turnRight(int angle) { // PRECONDITION: angle > 0
+	yaw = 0;
+	while (-getTheta() < angle) {
+		motor[leftDrive] = 100;
+		motor[rightDrive] = -100;
 	}
 	motor[leftDrive] = 0;
-  motor[rightDrive] = 0;
+	motor[rightDrive] = 0;
+}
 
-  float actualRotation = getTheta();
 
-  wait1Msec(500);
+void turnRight(int angle) { // PRECONDITION: angle > 0
+	yaw = 0;
+	while (getTheta() < angle) {
+		motor[leftDrive] = -100;
+		motor[rightDrive] = 100;
+	}
+	motor[leftDrive] = 0;
+	motor[rightDrive] = 0;
+}
 
-  motor[leftDrive] = 35;
-  motor[rightDrive] = 35;
-  while (nMotorEncoder[leftDrive] < 10932) {
-  }
-  motor[leftDrive] = 0;
-  motor[rightDrive] = 0;
 
-  motor[rightDrive] = -15;
-  motor[leftDrive] = 15;
-  while(getTheta() < actualRotation) {
-  }
+void autonomous() {
+
 }
 
 

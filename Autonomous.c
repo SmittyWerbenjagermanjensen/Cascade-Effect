@@ -10,7 +10,11 @@
 #pragma config(Motor,  mtr_S1_C1_2,     mainIntake,    tmotorTetrix, openLoop)
 #pragma config(Motor,  mtr_S1_C2_1,     elevator,      tmotorTetrix, openLoop, encoder)
 #pragma config(Motor,  mtr_S1_C2_2,     motorG,        tmotorTetrix, openLoop)
+<<<<<<< HEAD
 #pragma config(Motor,  mtr_S1_C3_1,     rightDrive,    tmotorTetrix, PIDControl, encoder)
+=======
+#pragma config(Motor,  mtr_S1_C3_1,     rightDrive,    tmotorTetrix, PIDControl, reversed, encoder)
+>>>>>>> origin/master
 #pragma config(Motor,  mtr_S1_C3_2,     goalLifter,    tmotorTetrix, openLoop, encoder)
 #pragma config(Servo,  srvo_S1_C4_1,    score,                tServoStandard)
 #pragma config(Servo,  srvo_S1_C4_2,    servo2,               tServoNone)
@@ -24,16 +28,13 @@
 #include "drivers/hitechnic-accelerometer.h";
 #include "JoystickDriver.c"  //Include file to "handle" the Bluetooth messages.
 
+<<<<<<< HEAD
 float thetaX = 0;
+=======
+float yaw = 0;
+>>>>>>> origin/master
 float avgGyroX = 0;
 bool finished = false;
-int xAxis = 0;
-int yAxis = 0;
-int zAxis = 0;
-float avgXAxis = 0;
-float avgYAxis = 0;
-float avgZAxis = 0;
-
 
 
 void calibrateSensors() {
@@ -45,25 +46,27 @@ void calibrateSensors() {
 		}
 	}
 	avgGyroX = avgGyroX/1000;
-	PlaySound(soundLowBuzz);
-	 for (int i = 0; i < 1000; i ++) {
-	 	HTACreadAllAxes(S3, xAxis, yAxis, zAxis);
-		avgXAxis += xAxis;
-		avgYAxis += yAxis;
-	  avgZAxis += zAxis;
-		wait1Msec(1);
-  }
-  avgZAxis = avgZAxis/1000;
 }
 
 
-int getTheta() {
-	thetaX = thetaX + ((float)SensorValue[yawDetector]-avgGyroX) * time1[T1] / 1000.0;
+float getTheta() {
+	yaw = yaw + ((float)SensorValue[yawDetector]-avgGyroX) * time1[T1] / 1000.0;
 	ClearTimer(T1);
-	return (int)(thetaX);
+	return (yaw);
 }
 
+void forward(int forwardTicks, int speed) {
+	nMotorEncoder[rightDrive] = 0;
+	nMotorEncoder[leftDrive] = 0;
+	nMotorEncoderTarget[rightDrive] = forwardTicks;
+	motor[rightDrive] = speed;
+	motor[leftDrive] = speed;
+	while(nMotorRunState[rightDrive] != runStateIdle) {}
+	motor[rightDrive] = 0;
+	motor[leftDrive] = 0;
+}
 
+<<<<<<< HEAD
 void turnLeft(int theta) { // PRECONDITION: Theta is positive
 	int startAngle = getTheta();
 		while(getTheta()%360 > (startAngle-theta)%360) {
@@ -105,24 +108,63 @@ bool waitForRamp() {
 	while (!offRamp) {
 	}
 	return false;
-}
-
-
-int getAxes() {
-	return 0;
-}
-
-
+=======
 void initializeRobot()
 {
-  calibrateSensors();
-  servo[servo1] = 0;
+  //calibrateSensors();
+  //servo[score] = 0;
+>>>>>>> origin/master
+}
+
+
+void goForward(int dist, int speed) { // PRECONDITION: dist > 0
+	nMotorEncoder[leftDrive] = 0;
+	nMotorEncoderTarget[leftDrive] = dist*118.8357/1.5; // converts inches to ticks
+	motor[leftDrive] = speed;
+	motor[rightDrive] = speed;
+	while(nMotorRunState[leftDrive] != runStateIdle && nMotorRunState[rightDrive] != runStateIdle) {}
+	motor[leftDrive] = 0;
+	motor[rightDrive] = 0;
+}
+
+
+void goBackward(int dist, int speed) { // PRECONDITION: dist > 0
+	nMotorEncoder[leftDrive] = 0;
+	nMotorEncoder[rightDrive] = 0;
+	nMotorEncoderTarget[leftDrive] = dist*118.8357/1.5; // converts inches to ticks
+	nMotorEncoderTarget[rightDrive] = dist*118.8357/1.5; // converts inches to ticks
+	motor[leftDrive] = -speed;
+	motor[rightDrive] = -speed;
+	while(nMotorRunState[leftDrive] != runStateIdle && nMotorRunState[rightDrive] != runStateIdle) {}
+	motor[leftDrive] = 0;
+	motor[rightDrive] = 0;
+}
+
+
+void turnRight(int angle) { // PRECONDITION: angle > 0
+	yaw = 0;
+	while (-getTheta() < angle) {
+		motor[leftDrive] = 100;
+		motor[rightDrive] = -100;
+	}
+	motor[leftDrive] = 0;
+	motor[rightDrive] = 0;
+}
+
+
+void turnRight(int angle) { // PRECONDITION: angle > 0
+	yaw = 0;
+	while (getTheta() < angle) {
+		motor[leftDrive] = -100;
+		motor[rightDrive] = 100;
+	}
+	motor[leftDrive] = 0;
+	motor[rightDrive] = 0;
 }
 
 
 void autonomous() {
-	motor[rightDrive] = -25;
-  motor[leftDrive] = -25;
+	goBackward(120, 50);
 }
 
 

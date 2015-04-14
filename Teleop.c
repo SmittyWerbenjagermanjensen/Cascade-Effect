@@ -6,13 +6,13 @@
 #pragma config(Motor,  motorA,           ,             tmotorNXT, openLoop)
 #pragma config(Motor,  motorB,           ,             tmotorNXT, openLoop)
 #pragma config(Motor,  motorC,           ,             tmotorNXT, openLoop)
-#pragma config(Motor,  mtr_S1_C1_1,     leftDrive,     tmotorTetrix, PIDControl, encoder)
-#pragma config(Motor,  mtr_S1_C1_2,     mainIntake,    tmotorTetrix, openLoop)
+#pragma config(Motor,  mtr_S1_C1_1,     leftDrive,     tmotorTetrix, openLoop, encoder)
+#pragma config(Motor,  mtr_S1_C1_2,     mainIntake,    tmotorTetrix, PIDControl, reversed)
 #pragma config(Motor,  mtr_S1_C2_1,     elevator,      tmotorTetrix, openLoop, encoder)
 #pragma config(Motor,  mtr_S1_C2_2,     motorG,        tmotorTetrix, openLoop)
-#pragma config(Motor,  mtr_S1_C3_1,     rightDrive,    tmotorTetrix, PIDControl, encoder)
+#pragma config(Motor,  mtr_S1_C3_1,     rightDrive,    tmotorTetrix, openLoop, reversed, encoder)
 #pragma config(Motor,  mtr_S1_C3_2,     goalLifter,    tmotorTetrix, openLoop, encoder)
-#pragma config(Servo,  srvo_S1_C4_1,    score,                tServoStandard)
+#pragma config(Servo,  srvo_S1_C4_1,    servo1,               tServoNone)
 #pragma config(Servo,  srvo_S1_C4_2,    servo2,               tServoNone)
 #pragma config(Servo,  srvo_S1_C4_3,    servo3,               tServoNone)
 #pragma config(Servo,  srvo_S1_C4_4,    servo4,               tServoNone)
@@ -22,14 +22,15 @@
 
 #include "JoystickDriver.c"  //Include file to "handle" the Bluetooth messages.
 
-bool intakeForward = false;
-bool intakeBackward = false;
+int intakeDir = 0;
+bool lastPressed[12];
 bool elevatorAtTop = false;
 bool elevatorAtBottom = true;
 float maxSpeed = 1.0;
 
 void initializeRobot()
 {
+	lastPressed = {0,0,0,0,0,0,0,0,0,0,0,0};
   return;
 }
 
@@ -42,29 +43,31 @@ task main() {
   while (true) { //Literally just controls the Left Drive
 		getJoystickSettings(joystick);
 
+		//PlaySound(soundDownwardTones);
+
 		if (abs(joystick.joy1_y1) > 15) {
-			motor[leftDrive] = joystick.joy1_y1 * maxSpeed;
+			motor[leftDrive] = joystick.joy1_y1*maxSpeed;
 		}
 		else {
 			motor[leftDrive] = 0;
 		}
 
 	  if (abs(joystick.joy1_y2) > 15) {
-			motor[rightDrive] = joystick.joy1_y2 * maxSpeed;
+			motor[rightDrive] = joystick.joy1_y2*maxSpeed;
 		}
 		else {
 			motor[rightDrive] = 0;
 		}
 
-		if (joy1Btn(1)) {
+		/*if (joy1Btn(1)) {
 			servo[goalLifter] = 30;
 		}
 
 		if (joy1Btn(2)) {
 			servo[goalLifter] = 0;
-		}
+		}*/
 
-		if (joy1Btn(3)) {
+		/*if (joy1Btn(3)) {
 			if (intakeForward) { // Stops intake if going forward
 				motor[mainIntake] = 0;
 				intakeForward = false;
@@ -84,21 +87,26 @@ task main() {
 				motor[mainIntake] = -50;
 				intakeBackward = true;
 			}
-		}
+		}*/
 
-		if (joy1Btn(5)){ //"unscores"
-			servo[score] = 0;
+		if (joy1Btn(3))
+			motor[mainIntake] = 80;
+	  else if (joy1Btn(1))
+	  	motor[mainIntake] = 0;
+
+		/*if (joy1Btn(5)){ //"unscores"
+			//\servo[score] = 0;
   	}
 
 		if (joy1Btn(6)){ // Scores
 			servo[score] = 20;
-		}
+		}*/
 
-		if (joy1Btn(7) && !elevatorAtTop) {
+		if (joy1Btn(7)) {
 			motor[elevator] = 50;
 		}
 
-		if (joy1Btn(8) && !elevatorAtBottom) {
+		if (joy1Btn(8)) {
 			motor[elevator] = -50;
 		}
 

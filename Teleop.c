@@ -23,15 +23,33 @@
 #include "JoystickDriver.c"  //Include file to "handle" the Bluetooth messages.
 
 int intakeDir = 0;
-bool lastPressed[12];
+bool lastPressed[12] = {false, false, false, false, false, false, false, false, false, false, false, false};
 bool elevatorAtTop = false;
-bool elevatorAtBottom = true;
+bool elevatorAtBottom = false;
 float maxSpeed = 1.0;
 
-void initializeRobot()
-{
-	lastPressed = {0,0,0,0,0,0,0,0,0,0,0,0};
+
+void initializeRobot() {
+	nMotorEncoder[goalLifter] = 0;
   return;
+}
+
+
+void raiseGoal() {
+	nMotorEncoderTarget[goalLifter] = 100;
+	motor[goalLifter] = 30;
+}
+
+
+void lowerGoal() {
+	nMotorEncoderTarget[goalLifter] = 0;
+	motor[goalLifter] = -30;
+}
+
+
+void resetMotors() { // stoops motors that need to be stooped
+	if (nMotorRunState[goalLifter] == runStateIdle)
+		motor[goalLifter] = 0;
 }
 
 
@@ -59,40 +77,35 @@ task main() {
 			motor[rightDrive] = 0;
 		}
 
-		/*if (joy1Btn(1)) {
-			servo[goalLifter] = 30;
+		if (joy1Btn(1)) { // if 1 was just pressed and the goal is not raised
+			raiseGoal();
 		}
 
 		if (joy1Btn(2)) {
-			servo[goalLifter] = 0;
-		}*/
+			lowerGoal();
+		}
 
-		/*if (joy1Btn(3)) {
-			if (intakeForward) { // Stops intake if going forward
+		if (joy1Btn(3) && !lastPressed[3]) { // if button 3 was just pressed
+			if (intakeDir > 0) { // Stops intake if going forward
 				motor[mainIntake] = 0;
-				intakeForward = false;
+				intakeDir = 0;
 			}
-			else { // Intake goes forward if not in motion
-					motor[mainIntake] = 50;
-				intakeForward = true;
+			else { // Intake goes forward if not in motion or backward
+				motor[mainIntake] = 100;
+				intakeDir = 1;
 			}
 		}
 
-		if (joy1Btn(4)){ // Stops intake if going backward
-			if (intakeBackward) {
+		if (joy1Btn(3) && !lastPressed[4]) { // if button 4 was just pressed
+			if (intakeDir < 0) { // Stops intake if going backward
 				motor[mainIntake] = 0;
-				intakeBackward = false;
+				intakeDir = 0;
 			}
-			else { // Intake goes backward if not in motion
-				motor[mainIntake] = -50;
-				intakeBackward = true;
+			else { // Intake goes backward if not in motion or forward
+				motor[mainIntake] = -100;
+				intakeDir = -1;
 			}
-		}*/
-
-		if (joy1Btn(3))
-			motor[mainIntake] = 80;
-	  else if (joy1Btn(1))
-	  	motor[mainIntake] = 0;
+		}
 
 		/*if (joy1Btn(5)){ //"unscores"
 			//\servo[score] = 0;
@@ -102,26 +115,25 @@ task main() {
 			servo[score] = 20;
 		}*/
 
-		if (joy1Btn(7)) {
-			motor[elevator] = 50;
+		if (joy1Btn(7) && !elevatorAtTop) {
+			motor[elevator] = 75;
 		}
 
-		if (joy1Btn(8)) {
+		if (joy1Btn(8) && !elevatorAtBottom) {
 			motor[elevator] = -50;
 		}
 
-		if (joy1Btn(9) && maxSpeed > 0.0) {
+		if (joy1Btn(9) && !lastPressed[9] && maxSpeed > 0.2) { // if 9 was just pressed and the robot is still moving
 			maxSpeed -= 0.2;
-			if (maxSpeed < 0.0) {
-				maxSpeed = 0.0;
-			}
 		}
 
-		if (joy1Btn(10) && maxSpeed < 1.0) {
+		if (joy1Btn(10) && !lastPressed[10] && maxSpeed < 1.0) { // if 10 was just pressed and the robot could go faster
 			maxSpeed += 0.2;
-			if (maxSpeed > 1.0) {
-				maxSpeed = 1.0;
-			}
 		}
+
+		for (int i = 3; i <= 10; i ++)
+			lastPressed[i] = joy1Btn(i)>0; // remembers what was pressed
+
+		resetMotors();
   }
 }

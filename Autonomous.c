@@ -10,7 +10,7 @@
 #pragma config(Motor,  mtr_S1_C1_2,     mainIntake,    tmotorTetrix, openLoop)
 #pragma config(Motor,  mtr_S1_C2_1,     elevator,      tmotorTetrix, openLoop, encoder)
 #pragma config(Motor,  mtr_S1_C2_2,     motorG,        tmotorTetrix, openLoop)
-#pragma config(Motor,  mtr_S1_C3_1,     rightDrive,    tmotorTetrix, PIDControl, encoder)
+#pragma config(Motor,  mtr_S1_C3_1,     rightDrive,    tmotorTetrix, PIDControl, reversed, encoder)
 #pragma config(Motor,  mtr_S1_C3_2,     goalLifter,    tmotorTetrix, openLoop, encoder)
 #pragma config(Servo,  srvo_S1_C4_1,    score,                tServoStandard)
 #pragma config(Servo,  srvo_S1_C4_2,    servo2,               tServoNone)
@@ -60,28 +60,30 @@ void forward(int forwardTicks, int speed) {
 
 void initializeRobot()
 {
-  calibrateSensors();
-  servo[score] = 0;
+  //calibrateSensors();
+  //servo[score] = 0;
 }
 
 
-void goForward(int dist) { // PRECONDITION: dist > 0
+void goForward(int dist, int speed) { // PRECONDITION: dist > 0
 	nMotorEncoder[leftDrive] = 0;
-	nMotorEncoderTarget[leftDrive] = dist*59.41785; // converts inches to ticks
-	motor[leftDrive] = 100;
-	motor[rightDrive] = 100;
-	while(nMotorRunState[leftDrive] != runStateIdle) {}
+	nMotorEncoderTarget[leftDrive] = dist*118.8357/1.5; // converts inches to ticks
+	motor[leftDrive] = speed;
+	motor[rightDrive] = speed;
+	while(nMotorRunState[leftDrive] != runStateIdle && nMotorRunState[rightDrive] != runStateIdle) {}
 	motor[leftDrive] = 0;
 	motor[rightDrive] = 0;
 }
 
 
-void goBackward(int dist) { // PRECONDITION: dist > 0
+void goBackward(int dist, int speed) { // PRECONDITION: dist > 0
 	nMotorEncoder[leftDrive] = 0;
-	nMotorEncoderTarget[leftDrive] = dist*59.41785; // converts inches to ticks
-	motor[leftDrive] = -100;
-	motor[rightDrive] = -100;
-	while(nMotorRunState[leftDrive] != runStateIdle) {}
+	nMotorEncoder[rightDrive] = 0;
+	nMotorEncoderTarget[leftDrive] = dist*118.8357/1.5; // converts inches to ticks
+	nMotorEncoderTarget[rightDrive] = dist*118.8357/1.5; // converts inches to ticks
+	motor[leftDrive] = -speed;
+	motor[rightDrive] = -speed;
+	while(nMotorRunState[leftDrive] != runStateIdle && nMotorRunState[rightDrive] != runStateIdle) {}
 	motor[leftDrive] = 0;
 	motor[rightDrive] = 0;
 }
@@ -110,7 +112,7 @@ void turnRight(int angle) { // PRECONDITION: angle > 0
 
 
 void autonomous() {
-
+	goBackward(120, 50);
 }
 
 

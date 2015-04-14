@@ -6,11 +6,11 @@
 #pragma config(Motor,  motorA,           ,             tmotorNXT, openLoop)
 #pragma config(Motor,  motorB,           ,             tmotorNXT, openLoop)
 #pragma config(Motor,  motorC,           ,             tmotorNXT, openLoop)
-#pragma config(Motor,  mtr_S1_C1_1,     leftDrive,     tmotorTetrix, PIDControl, reversed, encoder)
+#pragma config(Motor,  mtr_S1_C1_1,     leftDrive,     tmotorTetrix, openLoop, encoder)
 #pragma config(Motor,  mtr_S1_C1_2,     mainIntake,    tmotorTetrix, PIDControl, reversed)
 #pragma config(Motor,  mtr_S1_C2_1,     elevator,      tmotorTetrix, openLoop, encoder)
 #pragma config(Motor,  mtr_S1_C2_2,     motorG,        tmotorTetrix, openLoop)
-#pragma config(Motor,  mtr_S1_C3_1,     rightDrive,    tmotorTetrix, PIDControl, encoder)
+#pragma config(Motor,  mtr_S1_C3_1,     rightDrive,    tmotorTetrix, openLoop, reversed, encoder)
 #pragma config(Motor,  mtr_S1_C3_2,     goalLifter,    tmotorTetrix, openLoop, encoder)
 #pragma config(Servo,  srvo_S1_C4_1,    servo1,               tServoNone)
 #pragma config(Servo,  srvo_S1_C4_2,    servo2,               tServoNone)
@@ -30,6 +30,7 @@ float maxSpeed = 1.0;
 
 void initializeRobot()
 {
+	lastPressed = {0,0,0,0,0,0,0,0,0,0,0,0};
   return;
 }
 

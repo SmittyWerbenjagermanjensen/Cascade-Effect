@@ -7,14 +7,13 @@
 #pragma config(Motor,  motorB,           ,             tmotorNXT, openLoop)
 #pragma config(Motor,  motorC,           ,             tmotorNXT, openLoop)
 #pragma config(Motor,  mtr_S1_C1_1,     leftDrive,     tmotorTetrix, openLoop, encoder)
-#pragma config(Motor,  mtr_S1_C1_2,     mainIntake,    tmotorTetrix, PIDControl, reversed)
+#pragma config(Motor,  mtr_S1_C1_2,     mainIntake,    tmotorTetrix, openLoop)
 #pragma config(Motor,  mtr_S1_C2_1,     elevator,      tmotorTetrix, openLoop, encoder)
 #pragma config(Motor,  mtr_S1_C2_2,     motorG,        tmotorTetrix, openLoop)
 #pragma config(Motor,  mtr_S1_C3_1,     rightDrive,    tmotorTetrix, openLoop, reversed, encoder)
 #pragma config(Motor,  mtr_S1_C3_2,     goalLifter,    tmotorTetrix, PIDControl, encoder)
-#pragma config(Servo,  srvo_S1_C4_1,    score,                tServoStandard)
-#pragma config(Servo,  srvo_S1_C4_2,    servo2,               tServoNone)
-#pragma config(Servo,  srvo_S1_C4_3,    servo3,               tServoNone)
+#pragma config(Servo,  srvo_S1_C4_1,    autonScore,           tServoStandard)
+#pragma config(Servo,  srvo_S1_C4_2,    score,                tServoStandard)
 #pragma config(Servo,  srvo_S1_C4_4,    servo4,               tServoNone)
 #pragma config(Servo,  srvo_S1_C4_5,    servo5,               tServoNone)
 #pragma config(Servo,  srvo_S1_C4_6,    servo6,               tServoNone)
@@ -92,7 +91,7 @@ task main() {
 				intakeDir = 0;
 			}
 			else { // Intake goes forward if not in motion or backward
-				motor[mainIntake] = 100;
+				motor[mainIntake] = 80;
 				intakeDir = 1;
 			}
 		}
@@ -115,19 +114,20 @@ task main() {
 			servo[score] = 100;
 		}
 
-		if (joy1Btn(7)) { // if 7 is pressed
-			motor[elevator] = 75;
+		if (joy1Btn(7)) { // if 7 is pressed make elevator go up. (right trigger)
+			motor[elevator] = 100;
 		}
-		else if (joy1Btn(8)) { // if 8 is pressed
-			motor[elevator] = -50;
+		else if (joy1Btn(8)) { // if 8 is pressed make elevator go down. (left trigger)
+			motor[elevator] = -75;
 		}
 		else {
-			motor[elevator] = 0; // stop the elevator when nothing is pressed
+			motor[elevator] = 0; // stop the elevator when nothing is pressed.
 		}
 
 		if (joy1Btn(9) && !lastPressed[9] && maxSpeed > 0.2) { // if 9 was just pressed and the robot is still moving
 			maxSpeed -= 0.2;
 		}
+
 
 		if (joy1Btn(10) && !lastPressed[10] && maxSpeed < 1.0) { // if 10 was just pressed and the robot could go faster
 			maxSpeed += 0.2;

@@ -1,19 +1,19 @@
 #pragma config(Hubs,  S1, HTMotor,  HTMotor,  HTMotor,  HTServo)
 #pragma config(Sensor, S1,     ,               sensorI2CMuxController)
 #pragma config(Sensor, S2,     yawDetector,    sensorI2CHiTechnicGyro)
-#pragma config(Sensor, S3,     pitchDetector,    sensorI2CHiTechnicGyro)
+#pragma config(Sensor, S3,     pitchDetector,  sensorI2CHiTechnicGyro)
 #pragma config(Sensor, S4,     irDetector,     sensorHiTechnicIRSeeker1200)
 #pragma config(Motor,  motorA,           ,             tmotorNXT, openLoop)
 #pragma config(Motor,  motorB,           ,             tmotorNXT, openLoop)
 #pragma config(Motor,  motorC,           ,             tmotorNXT, openLoop)
 #pragma config(Motor,  mtr_S1_C1_1,     leftDrive,     tmotorTetrix, PIDControl, encoder)
 #pragma config(Motor,  mtr_S1_C1_2,     mainIntake,    tmotorTetrix, openLoop)
-#pragma config(Motor,  mtr_S1_C2_1,     elevator,      tmotorTetrix, openLoop, encoder)
+#pragma config(Motor,  mtr_S1_C2_1,     elevator,      tmotorTetrix, PIDControl, encoder)
 #pragma config(Motor,  mtr_S1_C2_2,     motorG,        tmotorTetrix, openLoop)
 #pragma config(Motor,  mtr_S1_C3_1,     rightDrive,    tmotorTetrix, PIDControl, reversed, encoder)
-#pragma config(Motor,  mtr_S1_C3_2,     goalLifter,    tmotorTetrix, openLoop, encoder)
+#pragma config(Motor,  mtr_S1_C3_2,     goalLifter,    tmotorTetrix, PIDControl, encoder)
 #pragma config(Servo,  srvo_S1_C4_1,    score,                tServoStandard)
-#pragma config(Servo,  srvo_S1_C4_2,    servo2,               tServoNone)
+#pragma config(Servo,  srvo_S1_C4_2,    autonScore,           tServoStandard)
 #pragma config(Servo,  srvo_S1_C4_3,    servo3,               tServoNone)
 #pragma config(Servo,  srvo_S1_C4_4,    servo4,               tServoNone)
 #pragma config(Servo,  srvo_S1_C4_5,    servo5,               tServoNone)
@@ -26,7 +26,6 @@
 
 float yaw = 0;
 float avgGyroX = 0;
-bool finished = false;
 
 
 void calibrateSensors() {
@@ -149,29 +148,100 @@ void pivotForwardOnLeft(int angle, int speed) { // PRECONDITION: angle > 0
 void realign() { // turns the robot forward
 	if (yaw > 0) {
 		motor[rightDrive] = 30;
-		motor[leftDrive] = -30;
 		while (getTheta() > 0) {}
 		motor[rightDrive] = 0;
-		motor[leftDrive] = 0;
 	}
 	else if (yaw < 0) {
-		motor[rightDrive] = -30;
 		motor[leftDrive] = 30;
 		while (getTheta() < 0) {}
-		motor[rightDrive] = 0;
 		motor[leftDrive] = 0;
 	}
 	yaw = 0;
 }
 
 
-void autonomous() {
-	goBackward(50, 50);
-	realign();
-	goBackward(60, 50);
-	pivotForwardOnRight(25, 40);
-	goForward(150, 50);
-	turnRight(135, 40);
+void dropLifter() {
+	nMotorEncoder[goalLifter] = 1440;
+	nMotorEncoderTarget[goalLifter] = 0;
+	motor[goalLifter] = -50;
+	while(nMotorRunState[goalLifter] != runStateIdle) {}
+	motor[goalLifter] = 0;
+}
+
+
+void pickUpGoal() {
+	nMotorEncoder[goalLifter] = 0;
+	nMotorEncoderTarget[goalLifter] = 100;
+	motor[goalLifter] = 30;
+	while(nMotorRunState[goalLifter] != runStateIdle) {}
+	motor[goalLifter] = 0;
+}
+
+
+void putDownGoal() {
+	nMotorEncoder[goalLifter] = 100;
+	nMotorEncoderTarget[goalLifter] = 0;
+	motor[goalLifter] = -30;
+	while(nMotorRunState[goalLifter] != runStateIdle) {}
+	motor[goalLifter] = 0;
+}
+
+
+void findIR() {
+	for (int i = 0; i < 3; i ++) {
+  	if (SensorValue[irDetector] == 5)
+	  	return;
+  	goBackward(12, 50);
+  	pivotBackOnLeft(45, 50);
+  	goBackward(8, 50);
+  }
+
+  PlaySound(soundException); // if it doesn't find it, cry out in agony
+}
+
+
+void scoreMedium() {
+	motor[elevator] = 80;
+	wait1Msec(500);
+	motor[elevator] = 0;
+	servo[score] = 100;
+	wait1Msec(1000);
+	servo[score] = 0;
+	motor[elevator] = -50;
+	wait1Msec(200);
+}
+
+
+void scoreCenter() {
+	motor[elevator] = 80;
+	wait1Msec(300);
+	motor[elevator] = 0;
+	servo[autonScore] = 0;
+	servo[score] = 100;
+	wait1Msec(1000);
+	servo[score] = 0;
+	motor[elevator] = -50;
+	wait1Msec(200);
+}
+
+
+void runAutonomous() { // runs second half of SMITTY-AP (from the parking zone)
+	goForward(60, 50);
+	pivotBackOnRight(90, 50);
+	goBackward(12, 50);
+	findIR();
+	turnRight(90, 50);
+	//scoreCenter();
+	wait1Msec(2000);
+	turnLeft(90, 50);
+	goForward(8, 50);
+	turnLeft(90, 50);
+	while (true) {
+		goForward(24, 100);
+		PlaySound(soundUpwardTones);
+		goBackward(24, 100);
+		PlaySound(soundDownwardTones);
+	}
 }
 
 
@@ -181,7 +251,7 @@ task main()
 
   //waitForStart(); // Wait for the beginning of autonomous phase.
 
-  autonomous();
+  runAutonomous();
 
   while (true) {
   }

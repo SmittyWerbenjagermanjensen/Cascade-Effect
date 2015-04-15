@@ -1,7 +1,7 @@
 #pragma config(Hubs,  S1, HTMotor,  HTMotor,  HTMotor,  HTServo)
 #pragma config(Sensor, S1,     ,               sensorI2CMuxController)
 #pragma config(Sensor, S2,     yawDetector,    sensorI2CHiTechnicGyro)
-#pragma config(Sensor, S3,     accelerometer,  sensorI2CHiTechnicAccel)
+#pragma config(Sensor, S3,     pitchDetector,    sensorI2CHiTechnicGyro)
 #pragma config(Sensor, S4,     irDetector,     sensorHiTechnicIRSeeker1200)
 #pragma config(Motor,  motorA,           ,             tmotorNXT, openLoop)
 #pragma config(Motor,  motorB,           ,             tmotorNXT, openLoop)
@@ -38,18 +38,17 @@ bool finished = false;
 
 
 void calibrateSensors() {
-	while (avgGyroX < 570 || avgGyroX > 630) {
 		PlaySound(soundLowBuzz);
 	 	for (int i = 0; i < 1000; i ++) {
 			avgGyroX += SensorValue[yawDetector];
 			wait1Msec(1);
 		}
-	}
 	avgGyroX = avgGyroX/1000;
 }
 
 
 float getTheta() {
+	wait1Msec(5);
 	yaw = yaw + ((float)SensorValue[yawDetector]-avgGyroX) * time1[T1] / 1000.0;
 	ClearTimer(T1);
 	return (yaw);
@@ -111,7 +110,7 @@ bool waitForRamp() {
 =======
 void initializeRobot()
 {
-  //calibrateSensors();
+  calibrateSensors();
   //servo[score] = 0;
 >>>>>>> origin/master
 }
@@ -119,10 +118,12 @@ void initializeRobot()
 
 void goForward(int dist, int speed) { // PRECONDITION: dist > 0
 	nMotorEncoder[leftDrive] = 0;
-	nMotorEncoderTarget[leftDrive] = dist*118.8357/1.5; // converts inches to ticks
+	nMotorEncoderTarget[leftDrive] = dist*120.41595354/1.5; // converts inches to ticks
 	motor[leftDrive] = speed;
 	motor[rightDrive] = speed;
-	while(nMotorRunState[leftDrive] != runStateIdle && nMotorRunState[rightDrive] != runStateIdle) {}
+	while(nMotorRunState[leftDrive] != runStateIdle && nMotorRunState[rightDrive] != runStateIdle) {
+		getTheta();
+	}
 	motor[leftDrive] = 0;
 	motor[rightDrive] = 0;
 }
@@ -131,40 +132,108 @@ void goForward(int dist, int speed) { // PRECONDITION: dist > 0
 void goBackward(int dist, int speed) { // PRECONDITION: dist > 0
 	nMotorEncoder[leftDrive] = 0;
 	nMotorEncoder[rightDrive] = 0;
-	nMotorEncoderTarget[leftDrive] = dist*118.8357/1.5; // converts inches to ticks
-	nMotorEncoderTarget[rightDrive] = dist*118.8357/1.5; // converts inches to ticks
+	nMotorEncoderTarget[leftDrive] = dist*80.27730236; // converts inches to ticks
+	nMotorEncoderTarget[rightDrive] = dist*80.27730236; // converts inches to ticks
 	motor[leftDrive] = -speed;
 	motor[rightDrive] = -speed;
-	while(nMotorRunState[leftDrive] != runStateIdle && nMotorRunState[rightDrive] != runStateIdle) {}
-	motor[leftDrive] = 0;
-	motor[rightDrive] = 0;
-}
-
-
-void turnRight(int angle) { // PRECONDITION: angle > 0
-	yaw = 0;
-	while (-getTheta() < angle) {
-		motor[leftDrive] = 100;
-		motor[rightDrive] = -100;
+	while(nMotorRunState[leftDrive] != runStateIdle && nMotorRunState[rightDrive] != runStateIdle) {
+		getTheta();
 	}
 	motor[leftDrive] = 0;
 	motor[rightDrive] = 0;
 }
 
 
-void turnRight(int angle) { // PRECONDITION: angle > 0
+void turnRight(int angle, int speed) { // PRECONDITION: angle > 0
 	yaw = 0;
 	while (getTheta() < angle) {
-		motor[leftDrive] = -100;
-		motor[rightDrive] = 100;
+		motor[leftDrive] = speed;
+		motor[rightDrive] = -speed;
+		wait1Msec(5);
 	}
 	motor[leftDrive] = 0;
 	motor[rightDrive] = 0;
+}
+
+
+void turnLeft(int angle, int speed) { // PRECONDITION: angle > 0
+	yaw = 0;
+	while (-getTheta() < angle) {
+		motor[leftDrive] = -speed;
+		motor[rightDrive] = speed;
+		wait1Msec(5);
+	}
+	motor[leftDrive] = 0;
+	motor[rightDrive] = 0;
+}
+
+
+void pivotBackOnRight(int angle, int speed) { // PRECONDITION: angle > 0 < speed
+	yaw = 0;
+	while (-getTheta() < angle) {
+		motor[leftDrive] = -speed;
+		wait1Msec(5);
+	}
+	motor[leftDrive] = 0;
+}
+
+
+void pivotForwardOnRight(int angle, int speed) { // PRECONDITION: angle > 0
+	yaw = 0;
+	while (getTheta() < angle) {
+		motor[leftDrive] = speed;
+		wait1Msec(5);
+	}
+	motor[leftDrive] = 0;
+}
+
+
+void pivotBackOnLeft(int angle, int speed) { // PRECONDITION: angle > 0
+	yaw = 0;
+	while (getTheta() < angle) {
+		motor[rightDrive] = -speed;
+		wait1Msec(5);
+	}
+	motor[rightDrive] = 0;
+}
+
+
+void pivotForwardOnLeft(int angle, int speed) { // PRECONDITION: angle > 0
+	yaw = 0;
+	while (-getTheta() < angle) {
+		motor[rightDrive] = speed;
+		wait1Msec(5);
+	}
+	motor[rightDrive] = 0;
+}
+
+
+void realign() { // turns the robot forward
+	if (yaw > 0) {
+		motor[rightDrive] = 30;
+		motor[leftDrive] = -30;
+		while (getTheta() > 0) {}
+		motor[rightDrive] = 0;
+		motor[leftDrive] = 0;
+	}
+	else if (yaw < 0) {
+		motor[rightDrive] = -30;
+		motor[leftDrive] = 30;
+		while (getTheta() < 0) {}
+		motor[rightDrive] = 0;
+		motor[leftDrive] = 0;
+	}
+	yaw = 0;
 }
 
 
 void autonomous() {
-	goBackward(120, 50);
+	goBackward(50, 50);
+	realign();
+	goBackward(60, 50);
+	pivotForwardOnRight(25, 40);
+	goForward(150, 50);
+	turnRight(135, 40);
 }
 
 
@@ -172,7 +241,7 @@ task main()
 {
   initializeRobot();
 
-  waitForStart(); // Wait for the beginning of autonomous phase.
+  //waitForStart(); // Wait for the beginning of autonomous phase.
 
   autonomous();
 

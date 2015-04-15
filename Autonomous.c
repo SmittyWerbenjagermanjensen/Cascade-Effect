@@ -10,11 +10,7 @@
 #pragma config(Motor,  mtr_S1_C1_2,     mainIntake,    tmotorTetrix, openLoop)
 #pragma config(Motor,  mtr_S1_C2_1,     elevator,      tmotorTetrix, openLoop, encoder)
 #pragma config(Motor,  mtr_S1_C2_2,     motorG,        tmotorTetrix, openLoop)
-<<<<<<< HEAD
-#pragma config(Motor,  mtr_S1_C3_1,     rightDrive,    tmotorTetrix, PIDControl, encoder)
-=======
 #pragma config(Motor,  mtr_S1_C3_1,     rightDrive,    tmotorTetrix, PIDControl, reversed, encoder)
->>>>>>> origin/master
 #pragma config(Motor,  mtr_S1_C3_2,     goalLifter,    tmotorTetrix, openLoop, encoder)
 #pragma config(Servo,  srvo_S1_C4_1,    score,                tServoStandard)
 #pragma config(Servo,  srvo_S1_C4_2,    servo2,               tServoNone)
@@ -28,11 +24,7 @@
 #include "drivers/hitechnic-accelerometer.h";
 #include "JoystickDriver.c"  //Include file to "handle" the Bluetooth messages.
 
-<<<<<<< HEAD
-float thetaX = 0;
-=======
 float yaw = 0;
->>>>>>> origin/master
 float avgGyroX = 0;
 bool finished = false;
 
@@ -54,65 +46,11 @@ float getTheta() {
 	return (yaw);
 }
 
-void forward(int forwardTicks, int speed) {
-	nMotorEncoder[rightDrive] = 0;
-	nMotorEncoder[leftDrive] = 0;
-	nMotorEncoderTarget[rightDrive] = forwardTicks;
-	motor[rightDrive] = speed;
-	motor[leftDrive] = speed;
-	while(nMotorRunState[rightDrive] != runStateIdle) {}
-	motor[rightDrive] = 0;
-	motor[leftDrive] = 0;
-}
 
-<<<<<<< HEAD
-void turnLeft(int theta) { // PRECONDITION: Theta is positive
-	int startAngle = getTheta();
-		while(getTheta()%360 > (startAngle-theta)%360) {
-			motor[rightDrive] = 100;
-			motor[leftDrive] = -100;
-	}
-}
-
-
-void turnRight(int theta) {
-	int startAngle = getTheta();
-	while(getTheta()%360 < (startAngle+theta)%360) {
-		motor[rightDrive] = -100;
-		motor[leftDrive] = 100;
-	}
-}
-
-
-void goForward(int dist) { // PRECONDITION: Dist is positive
-	int startLoc = nMotorEncoder[rightDrive];
-	while (nMotorEncoder[rightDrive] < startLoc + dist) {
-		motor[rightDrive] = 100;
-		motor[leftDrive] = 100;
-	}
-}
-
-
-void goBackward(int dist) {
-	int startLoc = nMotorEncoder[rightDrive];
-	while (nMotorEncoder[rightDrive] > startLoc - dist) {
-		motor[rightDrive] = -100;
-		motor[leftDrive] = -100;
-	}
-}
-
-
-bool waitForRamp() {
-	bool offRamp = false;
-	while (!offRamp) {
-	}
-	return false;
-=======
 void initializeRobot()
 {
   calibrateSensors();
   //servo[score] = 0;
->>>>>>> origin/master
 }
 
 

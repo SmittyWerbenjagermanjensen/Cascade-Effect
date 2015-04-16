@@ -25,6 +25,8 @@
 
 const int raised = 100; // the encoder reading when the goal is raised
 const int lowered = 0; // the encoder reading when it is lowered
+const int scored = 253; // the servo value for an open trough
+const int unscored = 158; // the value for a closed goal
 
 int intakeDir = 0;
 bool lastPressed[12] = {false, false, false, false, false, false, false, false, false, false, false, false};
@@ -123,11 +125,11 @@ task main() {
 		}
 
 		if (joy1Btn(6)){ //"unscores"
-			servo[score] = 150;
+			servo[score] = unscored;
   	}
 
 		if (joy1Btn(5)){ // Scores
-			servo[score] = 253;
+			servo[score] = scored;
 		}
 
 		if (joy1Btn(7)) { // if 7 is pressed make elevator go up. (right trigger)

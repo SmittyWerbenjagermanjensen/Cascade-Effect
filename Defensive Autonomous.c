@@ -7,7 +7,7 @@
 #pragma config(Motor,  motorB,           ,             tmotorNXT, openLoop)
 #pragma config(Motor,  motorC,           ,             tmotorNXT, openLoop)
 #pragma config(Motor,  mtr_S1_C1_1,     leftDrive,     tmotorTetrix, PIDControl, encoder)
-#pragma config(Motor,  mtr_S1_C1_2,     mainIntake,    tmotorTetrix, openLoop)
+#pragma config(Motor,  mtr_S1_C1_2,     mainIntake,    tmotorTetrix, openLoop, reversed)
 #pragma config(Motor,  mtr_S1_C2_1,     elevator,      tmotorTetrix, PIDControl, encoder)
 #pragma config(Motor,  mtr_S1_C2_2,     motorG,        tmotorTetrix, openLoop)
 #pragma config(Motor,  mtr_S1_C3_1,     rightDrive,    tmotorTetrix, PIDControl, reversed, encoder)
@@ -226,8 +226,10 @@ void scoreCenter() {
 
 
 void defend() { // patrols the opposing alliance side
-	goForward(24, 100);
-	turnRight(90, 50);
+	goForward(24, 50);
+	turnLeft(45, 50);
+	goForward(34, 50);
+	turnRight(45, 50);
 	while (true) {
 		goForward(96, 100);
 		turnRight(90, 50);

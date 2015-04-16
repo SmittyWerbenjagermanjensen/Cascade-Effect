@@ -223,6 +223,18 @@ void scoreMedium() {
 }
 
 
+void scoreTall() {
+	motor[elevator] = 80;
+	wait1Msec(500);
+	motor[elevator] = 0;
+	servo[score] = 100;
+	wait1Msec(1000);
+	servo[score] = 0;
+	motor[elevator] = -50;
+	wait1Msec(200);
+}
+
+
 void scoreCenter() {
 	motor[elevator] = 80;
 	wait1Msec(300);
@@ -253,32 +265,24 @@ void runAutonomous() { // scores over 200 pts for autonomous
 	goBackward(50, 50);
 	realign();
 	dropLifter();
-	goBackward(60, 50);
-	//scoreMedium();
-	wait1Msec(2000);
+	goBackward(50, 50);
 	pickUpGoal();
+	scoreMedium();
+	wait1Msec(2000);
+	turnLeft(100, 30);
+	goBackward(10, 50);
+	putDownGoal();
+	goForward(10, 50);
+	turnRight(100, 30);
+	goBackward(10, 50);
+	pickUpGoal();
+	scoreTall();
 	pivotForwardOnRight(28, 40);
 	goForward(100, 50);
 	turnRight(152, 40);
 	putDownGoal();
-	goForward(50, 50);
-	pivotBackOnRight(90, 50);
-	goBackward(12, 50);
-	findIR();
-	turnRight(90, 50);
-	//scoreCenter();
-	wait1Msec(2000);
-	turnLeft(90, 50);
-	goForward(8, 50);
-	turnLeft(90, 50);
-	while (true) {
-		goForward(24, 100);
-		PlaySound(soundUpwardTones);
-		goBackward(24, 100);
-		PlaySound(soundDownwardTones);
-	}
+	goForward(12, 50);
 }
-
 
 void runGyroAutonomous() { // same thing, but realigns exactly when it gets off the ramp
 	int initialDistanceTraveled = getOffRamp(50);
@@ -290,22 +294,7 @@ void runGyroAutonomous() { // same thing, but realigns exactly when it gets off 
 	goForward(100, 50);
 	turnRight(152, 40);
 	putDownGoal();
-	goForward(50, 50);
-	pivotBackOnRight(90, 50);
-	goBackward(12, 50);
-	findIR();
-	turnRight(90, 50);
-	//scoreCenter();
-	wait1Msec(2000);
-	turnLeft(90, 50);
-	goForward(8, 50);
-	turnLeft(90, 50);
-	while (true) {
-		goForward(24, 100);
-		PlaySound(soundUpwardTones);
-		goBackward(24, 100);
-		PlaySound(soundDownwardTones);
-	}
+	goForward(12, 50);
 }
 
 task main()

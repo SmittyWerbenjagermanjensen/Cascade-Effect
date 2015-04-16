@@ -7,13 +7,14 @@
 #pragma config(Motor,  motorB,           ,             tmotorNXT, openLoop)
 #pragma config(Motor,  motorC,           ,             tmotorNXT, openLoop)
 #pragma config(Motor,  mtr_S1_C1_1,     leftDrive,     tmotorTetrix, openLoop, encoder)
-#pragma config(Motor,  mtr_S1_C1_2,     mainIntake,    tmotorTetrix, openLoop)
+#pragma config(Motor,  mtr_S1_C1_2,     mainIntake,    tmotorTetrix, PIDControl, reversed)
 #pragma config(Motor,  mtr_S1_C2_1,     elevator,      tmotorTetrix, openLoop, encoder)
 #pragma config(Motor,  mtr_S1_C2_2,     motorG,        tmotorTetrix, openLoop)
 #pragma config(Motor,  mtr_S1_C3_1,     rightDrive,    tmotorTetrix, openLoop, reversed, encoder)
-#pragma config(Motor,  mtr_S1_C3_2,     goalLifter,    tmotorTetrix, PIDControl, encoder)
+#pragma config(Motor,  mtr_S1_C3_2,     goalLifter,    tmotorTetrix, PIDControl, reversed, encoder)
 #pragma config(Servo,  srvo_S1_C4_1,    autonScore,           tServoStandard)
 #pragma config(Servo,  srvo_S1_C4_2,    score,                tServoStandard)
+#pragma config(Servo,  srvo_S1_C4_3,    servo3,               tServoNone)
 #pragma config(Servo,  srvo_S1_C4_4,    servo4,               tServoNone)
 #pragma config(Servo,  srvo_S1_C4_5,    servo5,               tServoNone)
 #pragma config(Servo,  srvo_S1_C4_6,    servo6,               tServoNone)
@@ -27,30 +28,37 @@ const int lowered = 0; // the encoder reading when it is lowered
 
 int intakeDir = 0;
 bool lastPressed[12] = {false, false, false, false, false, false, false, false, false, false, false, false};
+float timeSinceLastPressed[12] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 float maxSpeed = 1.0;
 
 
 void initializeRobot() {
-	nMotorEncoder[goalLifter] = 0;
-	nMotorEncoder[elevator] = 0;
+	/*nMotorEncoder[goalLifter] = 1000;
+	nMotorEncoderTarget[goalLifter] = 0;
+	motor[goalLifter] = -30;
+	while (nMotorRunState[goalLifter] != runStateIdle) {}
+	motor[goalLifter] = 0;*/
 }
 
 
 void raiseGoal() {
+	PlaySound(soundUpwardTones);
 	nMotorEncoderTarget[goalLifter] = raised;
 	motor[goalLifter] = 30;
 }
 
 
 void lowerGoal() {
+	PlaySound(soundDownwardTones);
 	nMotorEncoderTarget[goalLifter] = lowered;
 	motor[goalLifter] = -30;
 }
 
 
 void resetMotors() { // stoops motors that need to be stooped
-	if (nMotorRunState[goalLifter] == runStateIdle)
+	if (nMotorRunState[goalLifter] == runStateIdle) {
 		motor[goalLifter] = 0;
+	}
 }
 
 
@@ -58,8 +66,8 @@ task main() {
   initializeRobot();
 
   waitForStart();   // wait for start of tele-op phase
-
-  while (true) { //Literally just controls the Left Drive
+	ClearTimer(T1);
+  while (true) {
 		getJoystickSettings(joystick);
 
 		//PlaySound(soundDownwardTones);
@@ -78,14 +86,19 @@ task main() {
 			motor[rightDrive] = 0;
 		}
 
-		if (joy1Btn(1) && !lastPressed[1] && nMotorEncoder[goalLifter] < raised) { // if 1 was just pressed and the goal is not raised
+		/*if (joy1Btn(1) && time1[T1] - timeSinceLastPressed[1]  > 1000 && nMotorEncoder[goalLifter] < raised) {
 			raiseGoal();
+			timeSinceLastPressed[1] = time1[T1];
 		}
-		else if (joy1Btn(2) && !lastPressed[2] && nMotorEncoder[goalLifter] > lowered) { // ditto
+		else if (joy1Btn(2) && time1[T1] - timeSinceLastPressed[2]  > 1000 && nMotorEncoder[goalLifter] > lowered) {
 			lowerGoal();
+			timeSinceLastPressed[2] = time1[T1];
 		}
+		else {
+			motor[goalLifter] = 0;
+		}*/
 
-		if (joy1Btn(3) && !lastPressed[3]) { // if button 3 was just pressed
+		if (joy1Btn(3) && time1[T1] - timeSinceLastPressed[3]  > 1000) { // if button 3 was just pressed
 			if (intakeDir > 0) { // Stops intake if going forward
 				motor[mainIntake] = 0;
 				intakeDir = 0;
@@ -94,48 +107,64 @@ task main() {
 				motor[mainIntake] = 80;
 				intakeDir = 1;
 			}
+			timeSinceLastPressed[3] = time1[T1];
 		}
-		else if (joy1Btn(3) && !lastPressed[4]) { // if button 4 was just pressed
+		else if (joy1Btn(4) && time1[T1] - timeSinceLastPressed[3]  > 1000) { // if button 4 was just pressed
 			if (intakeDir < 0) { // Stops intake if going backward
 				motor[mainIntake] = 0;
 				intakeDir = 0;
+
 			}
 			else { // Intake goes backward if not in motion or forward
 				motor[mainIntake] = -100;
 				intakeDir = -1;
 			}
+			timeSinceLastPressed[3] = time1[T1];
 		}
 
-		if (joy1Btn(5)){ //"unscores"
-			servo[score] = 0;
+		if (joy1Btn(6)){ //"unscores"
+			servo[score] = 150;
   	}
 
-		if (joy1Btn(6)){ // Scores
-			servo[score] = 100;
+		if (joy1Btn(5)){ // Scores
+			servo[score] = 253;
 		}
 
 		if (joy1Btn(7)) { // if 7 is pressed make elevator go up. (right trigger)
 			motor[elevator] = 100;
 		}
 		else if (joy1Btn(8)) { // if 8 is pressed make elevator go down. (left trigger)
-			motor[elevator] = -75;
+			motor[elevator] = -15;
 		}
 		else {
 			motor[elevator] = 0; // stop the elevator when nothing is pressed.
+		}
+
+		if (joystick.joy1_TopHat == 0) {
+			motor[goalLifter] = 30;
+		}
+		else if (joystick.joy1_TopHat == 4) {
+			motor[goalLifter] = -30;
+		}
+		else {
+			motor[goalLifter] = 0;
 		}
 
 		if (joy1Btn(9) && !lastPressed[9] && maxSpeed > 0.2) { // if 9 was just pressed and the robot is still moving
 			maxSpeed -= 0.2;
 		}
 
-
 		if (joy1Btn(10) && !lastPressed[10] && maxSpeed < 1.0) { // if 10 was just pressed and the robot could go faster
 			maxSpeed += 0.2;
 		}
 
 		for (int i = 1; i <= 10; i ++)
-			lastPressed[i] = joy1Btn(i)>0; // remembers what was pressed
-
-		resetMotors();
+			if(joy1Btn(i)) {
+				lastPressed[i] = true;
+			}
+			else {
+				lastPressed[i] = false;
+			}
+		//resetMotors();
   }
 }

@@ -30,11 +30,12 @@ const int unscored = 158; // the value for a closed goal
 
 int intakeDir = 0;
 bool lastPressed[12] = {false, false, false, false, false, false, false, false, false, false, false, false};
-float timeSinceLastPressed[12] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+float timeLastPressed[12] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 float maxSpeed = 1.0;
 
 
 void initializeRobot() {
+	servo[autonScore] = 127;
 	/*nMotorEncoder[goalLifter] = 1000;
 	nMotorEncoderTarget[goalLifter] = 0;
 	motor[goalLifter] = -30;
@@ -58,8 +59,9 @@ void lowerGoal() {
 
 
 void resetMotors() { // stoops motors that need to be stooped
-	if (nMotorRunState[goalLifter] == runStateIdle) {
-		motor[goalLifter] = 0;
+	if (intakeDir < 0 && time1[T1] - timeLastPressed[4] > 300) {
+		motor[mainIntake] = 0;
+		intakeDir = 0;
 	}
 }
 
@@ -100,7 +102,7 @@ task main() {
 			motor[goalLifter] = 0;
 		}*/
 
-		if (joy1Btn(3) && time1[T1] - timeSinceLastPressed[3]  > 1000) { // if button 3 was just pressed
+		if (joy1Btn(3) && time1[T1] - timeLastPressed[3]  > 500) { // if button 3 was just pressed
 			if (intakeDir > 0) { // Stops intake if going forward
 				motor[mainIntake] = 0;
 				intakeDir = 0;
@@ -109,9 +111,9 @@ task main() {
 				motor[mainIntake] = 80;
 				intakeDir = 1;
 			}
-			timeSinceLastPressed[3] = time1[T1];
+			timeLastPressed[3] = time1[T1];
 		}
-		else if (joy1Btn(4) && time1[T1] - timeSinceLastPressed[3]  > 1000) { // if button 4 was just pressed
+		else if (joy1Btn(4) && time1[T1] - timeLastPressed[4]  > 500) { // if button 4 was just pressed
 			if (intakeDir < 0) { // Stops intake if going backward
 				motor[mainIntake] = 0;
 				intakeDir = 0;
@@ -121,7 +123,7 @@ task main() {
 				motor[mainIntake] = -100;
 				intakeDir = -1;
 			}
-			timeSinceLastPressed[3] = time1[T1];
+			timeLastPressed[4] = time1[T1];
 		}
 
 		if (joy1Btn(6)){ //"unscores"
@@ -167,6 +169,7 @@ task main() {
 			else {
 				lastPressed[i] = false;
 			}
-		//resetMotors();
+
+		resetMotors();
   }
 }

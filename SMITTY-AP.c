@@ -11,7 +11,7 @@
 #pragma config(Motor,  mtr_S1_C2_1,     elevator,      tmotorTetrix, PIDControl, encoder)
 #pragma config(Motor,  mtr_S1_C2_2,     motorG,        tmotorTetrix, openLoop)
 #pragma config(Motor,  mtr_S1_C3_1,     rightDrive,    tmotorTetrix, PIDControl, reversed, encoder)
-#pragma config(Motor,  mtr_S1_C3_2,     goalLifter,    tmotorTetrix, PIDControl, encoder)
+#pragma config(Motor,  mtr_S1_C3_2,     goalLifter,    tmotorTetrix, PIDControl, reversed, encoder)
 #pragma config(Servo,  srvo_S1_C4_1,    score,                tServoStandard)
 #pragma config(Servo,  srvo_S1_C4_2,    autonScore,           tServoStandard)
 #pragma config(Servo,  srvo_S1_C4_3,    servo3,               tServoNone)
@@ -23,6 +23,11 @@
 #include "drivers/hitechnic-gyro.h";
 #include "drivers/hitechnic-accelerometer.h";
 #include "JoystickDriver.c"  //Include file to "handle" the Bluetooth messages.
+
+
+const int retracted = 1000;
+const int lifted = 350;
+const int bottom = 0;
 
 float yaw = 0;
 float avgGyroX = 0;
@@ -60,13 +65,16 @@ float getPitch() {
 void initializeRobot()
 {
   calibrateSensors();
-  //servo[score] = 0;
+  servo[score] = 158;
+  yaw = 0;
 }
 
 
 void goForward(int dist, int speed) { // PRECONDITION: dist > 0
 	nMotorEncoder[leftDrive] = 0;
+	nMotorEncoder[rightDrive] = 0;
 	nMotorEncoderTarget[leftDrive] = dist*80.27730236; // converts inches to ticks
+  nMotorEncoderTarget[rightDrive] = dist*80.27730236; // converts inches to ticks
 	motor[leftDrive] = speed;
 	motor[rightDrive] = speed;
 	while(nMotorRunState[leftDrive] != runStateIdle && nMotorRunState[rightDrive] != runStateIdle) {
@@ -157,44 +165,75 @@ void pivotForwardOnLeft(int angle, int speed) { // PRECONDITION: angle > 0
 
 
 void realign() { // turns the robot forward
-	if (yaw > 0) {
-		motor[rightDrive] = 30;
-		while (getTheta() > 0) {}
+	nxtDisplayCenteredTextLine(5, "%d", getTheta());
+	if (getTheta() > 5) {
+		motor[leftDrive] = -15;
+		while (getTheta() > 5) {}
 		motor[rightDrive] = 0;
 	}
-	else if (yaw < 0) {
-		motor[leftDrive] = 30;
-		while (getTheta() < 0) {}
-		motor[leftDrive] = 0;
+	else if (getTheta() < 5) {
+		motor[rightDrive] = -15;
+		while (getTheta() < 5) {}
+		motor[rightDrive] = 0;
 	}
 	yaw = 0;
+	PlaySound(soundBlip);
 }
 
 
-void dropLifter() {
-	nMotorEncoder[goalLifter] = 1440;
-	nMotorEncoderTarget[goalLifter] = 0;
-	motor[goalLifter] = -50;
-	while(nMotorRunState[goalLifter] != runStateIdle) {}
+void deployLifter() {
+	nMotorEncoder[goalLifter] = bottom;
+	while(nMotorEncoder[goalLifter] > -retracted) {
+		motor[goalLifter] = -50;
+	}
+	motor[goalLifter] = 0;
+	nMotorEncoder[goalLifter] = bottom;
+}
+
+
+void undeployLifter() {
+	while(nMotorEncoder[goalLifter] < retracted) {
+		motor[goalLifter] = 50;
+	}
 	motor[goalLifter] = 0;
 }
 
 
 void pickUpGoal() {
-	nMotorEncoder[goalLifter] = 0;
-	nMotorEncoderTarget[goalLifter] = 100;
-	motor[goalLifter] = 30;
-	while(nMotorRunState[goalLifter] != runStateIdle) {}
+	while(nMotorEncoder[goalLifter] < lifted) {
+		motor[goalLifter] = 30;
+	}
 	motor[goalLifter] = 0;
+	PlaySound(soundBeepBeep);
 }
 
 
 void putDownGoal() {
-	nMotorEncoder[goalLifter] = 100;
-	nMotorEncoderTarget[goalLifter] = 0;
-	motor[goalLifter] = -30;
-	while(nMotorRunState[goalLifter] != runStateIdle) {}
+	while(nMotorEncoder[goalLifter] > bottom) {
+		motor[goalLifter] = -30;
+	}
 	motor[goalLifter] = 0;
+}
+
+
+void swerveBackwardWhileDeployingLifter() { // 52 is the distance
+	nMotorEncoder[goalLifter] = bottom;
+	nMotorEncoder[leftDrive] = 0;
+	nMotorEncoder[rightDrive] = 0;
+	nMotorEncoderTarget[leftDrive] = 52*80.27730236; // converts inches to ticks
+	nMotorEncoderTarget[rightDrive] = 52*80.27730236; // converts inches to ticks
+	motor[leftDrive] = -50;
+	motor[rightDrive] = -50;
+	while(nMotorEncoder[goalLifter] > -retracted && nMotorRunState[leftDrive] != runStateIdle && nMotorRunState[rightDrive] != runStateIdle) {
+		motor[goalLifter] = -50;
+	}
+	motor[goalLifter] = 0;
+	while(nMotorRunState[leftDrive] != runStateIdle && nMotorRunState[rightDrive] != runStateIdle) {
+		getTheta();
+	}
+	motor[rightDrive] = 0;
+	motor[leftDrive] = 0;
+	nMotorEncoder[goalLifter] = bottom;
 }
 
 
@@ -247,6 +286,7 @@ void scoreCenter() {
 	wait1Msec(200);
 }
 
+
 int getOffRamp(int speed) {
 	nMotorEncoder[rightDrive] = 0;
 	nMotorEncoder[leftDrive] = 0;
@@ -254,21 +294,56 @@ int getOffRamp(int speed) {
 	motor[leftDrive] = -speed;
 	while(abs(getPitch()) < 10 || (nMotorEncoder[leftDrive] >= (22*80.27730236) && nMotorEncoder[rightDrive] >= (22*80.27730236))) {
 	}
-	while(abs(getPitch()) > 10 || (nMotorEncoder[leftDrive] >= (36*80.27730236) && nMotorEncoder[rightDrive] >= (36*80.27730236))) {
+	PlaySound(soundDownwardTones);
+	while(abs(getPitch()) > 0 || (nMotorEncoder[leftDrive] >= (36*80.27730236) && nMotorEncoder[rightDrive] >= (36*80.27730236))) {
 	}
+	PlaySound(soundFastUpwardTones);
 	motor[rightDrive] = 0;
 	motor[leftDrive] = 0;
 	return nMotorEncoder[leftDrive];
 }
 
+
+void getOffRampAndGetGoal() {
+	nMotorEncoder[leftDrive] = 0;
+	nMotorEncoder[rightDrive] = 0;
+	motor[leftDrive] = -50;
+	motor[rightDrive] = -50;
+	while (abs(nMotorEncoder[leftDrive]) < 4174) {}
+	PlaySound(soundBeepBeep);
+	nMotorEncoder[goalLifter] = 0;
+	motor[goalLifter] = -50;
+	while(abs(nMotorEncoder[leftDrive]) < 8028 && abs(nMotorEncoder[rightDrive]) < 8028) {
+		if (nMotorEncoder[goalLifter] <= -retracted) {
+			motor[goalLifter] = 0;
+		}
+		if ((time100[T4]/3)%2 == 0) {
+			motor[rightDrive] = -30;
+			motor[leftDrive] = -80;
+		}
+		else {
+			motor[rightDrive] = -80;
+			motor[leftDrive] = -30;
+		}
+	}
+	motor[leftDrive] = 0;
+	motor[rightDrive] = 0;
+	nMotorEncoder[goalLifter] = bottom;
+}
+
+
 void runAutonomous() { // scores over 200 pts for autonomous
-	goBackward(50, 50);
-	realign();
-	dropLifter();
-	goBackward(50, 50);
+	/*goBackwardCoast(58, 50);
+	//realign();
+	swerveBackwardWhileDeployingLifter();
+	*/
+	getOffRampAndGetGoal();
 	pickUpGoal();
-	scoreMedium();
-	wait1Msec(2000);
+	pivotForwardOnRight(25, 50);
+	//scoreMedium();
+	goForward(24, 50);
+	turnRight(160, 50);
+	/*wait1Msec(10000);
 	turnLeft(100, 30);
 	goBackward(10, 50);
 	putDownGoal();
@@ -276,26 +351,15 @@ void runAutonomous() { // scores over 200 pts for autonomous
 	turnRight(100, 30);
 	goBackward(10, 50);
 	pickUpGoal();
-	scoreTall();
+	//scoreTall();
 	pivotForwardOnRight(28, 40);
 	goForward(100, 50);
 	turnRight(152, 40);
 	putDownGoal();
 	goForward(12, 50);
+	undeployLifter();*/
 }
 
-void runGyroAutonomous() { // same thing, but realigns exactly when it gets off the ramp
-	int initialDistanceTraveled = getOffRamp(50);
-	realign();
-	goBackward(110-initialDistanceTraveled, 50);
-	wait1Msec(2000);
-	pickUpGoal();
-	pivotForwardOnRight(28, 40);
-	goForward(100, 50);
-	turnRight(152, 40);
-	putDownGoal();
-	goForward(12, 50);
-}
 
 task main()
 {

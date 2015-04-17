@@ -11,7 +11,7 @@
 #pragma config(Motor,  mtr_S1_C2_1,     elevator,      tmotorTetrix, PIDControl, encoder)
 #pragma config(Motor,  mtr_S1_C2_2,     motorG,        tmotorTetrix, openLoop)
 #pragma config(Motor,  mtr_S1_C3_1,     rightDrive,    tmotorTetrix, PIDControl, reversed, encoder)
-#pragma config(Motor,  mtr_S1_C3_2,     goalLifter,    tmotorTetrix, PIDControl, encoder)
+#pragma config(Motor,  mtr_S1_C3_2,     goalLifter,    tmotorTetrix, PIDControl, reversed, encoder)
 #pragma config(Servo,  srvo_S1_C4_1,    score,                tServoStandard)
 #pragma config(Servo,  srvo_S1_C4_2,    autonScore,           tServoStandard)
 #pragma config(Servo,  srvo_S1_C4_3,    servo3,               tServoNone)
@@ -29,7 +29,7 @@ float avgGyroX = 0;
 
 
 void calibrateSensors() {
-		PlaySound(soundLowBuzz);
+		//PlaySound(soundLowBuzz);
 	 	for (int i = 0; i < 1000; i ++) {
 			avgGyroX += SensorValue[yawDetector];
 			wait1Msec(1);
@@ -55,10 +55,12 @@ void initializeRobot()
 
 void goForward(int dist, int speed) { // PRECONDITION: dist > 0
 	nMotorEncoder[leftDrive] = 0;
-	nMotorEncoderTarget[leftDrive] = dist*120.41595354/1.5; // converts inches to ticks
+	nMotorEncoder[rightDrive] = 0;
+	/*nMotorEncoderTarget[leftDrive] = dist*120.41595354/1.5; // converts inches to ticks
+	nMotorEncoderTarget[rightDrive] = dist*120.41595354/1.5; // converts inches to ticks*/
 	motor[leftDrive] = speed;
 	motor[rightDrive] = speed;
-	while(nMotorRunState[leftDrive] != runStateIdle && nMotorRunState[rightDrive] != runStateIdle) {
+	while(nMotorEncoder[leftDrive] < dist*120.41595354/1.5 && nMotorEncoder[rightDrive] < dist*120.41595354/1.5) {
 		getTheta();
 	}
 	motor[leftDrive] = 0;
@@ -69,15 +71,17 @@ void goForward(int dist, int speed) { // PRECONDITION: dist > 0
 void goBackward(int dist, int speed) { // PRECONDITION: dist > 0
 	nMotorEncoder[leftDrive] = 0;
 	nMotorEncoder[rightDrive] = 0;
-	nMotorEncoderTarget[leftDrive] = dist*80.27730236; // converts inches to ticks
-	nMotorEncoderTarget[rightDrive] = dist*80.27730236; // converts inches to ticks
+	/*nMotorEncoderTarget[leftDrive] = dist*80.27730236; // converts inches to ticks
+	nMotorEncoderTarget[rightDrive] = dist*80.27730236; // converts inches to ticks*/
 	motor[leftDrive] = -speed;
 	motor[rightDrive] = -speed;
-	while(nMotorRunState[leftDrive] != runStateIdle && nMotorRunState[rightDrive] != runStateIdle) {
+	while(nMotorEncoder[leftDrive] < -dist*120.41595354/1.5 && nMotorEncoder[rightDrive] < -dist*120.41595354/1.5) {
 		getTheta();
 	}
+	/*
 	motor[leftDrive] = 0;
 	motor[rightDrive] = 0;
+	*/
 }
 
 
@@ -88,8 +92,10 @@ void turnRight(int angle, int speed) { // PRECONDITION: angle > 0
 		motor[rightDrive] = -speed;
 		wait1Msec(5);
 	}
+	/*
 	motor[leftDrive] = 0;
 	motor[rightDrive] = 0;
+	*/
 }
 
 
@@ -98,10 +104,11 @@ void turnLeft(int angle, int speed) { // PRECONDITION: angle > 0
 	while (-getTheta() < angle) {
 		motor[leftDrive] = -speed;
 		motor[rightDrive] = speed;
-		wait1Msec(5);
 	}
+	/*
 	motor[leftDrive] = 0;
 	motor[rightDrive] = 0;
+	*/
 }
 
 
@@ -226,10 +233,18 @@ void scoreCenter() {
 
 
 void defend() { // patrols the opposing alliance side
-	goForward(24, 50);
-	turnLeft(45, 50);
-	goForward(34, 50);
-	turnRight(45, 50);
+	goForward(12, 100);
+	turnLeft(15, 100);
+	goForward(50, 100);
+	turnLeft(10, 50);
+	goForward(24, 100);
+	motor[rightDrive] = 0;
+	motor[leftDrive] = 0;
+	wait1Msec(10000);
+	goBackward(28, 100);
+	motor[rightDrive] = 0;
+	motor[leftDrive] = 0;
+	/*5
 	while (true) {
 		goForward(96, 100);
 		turnRight(90, 50);
@@ -240,6 +255,7 @@ void defend() { // patrols the opposing alliance side
 		goForward(96, 100);
 		turnRight(180, 50);
 	}
+	*/
 }
 
 

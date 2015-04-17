@@ -11,7 +11,7 @@
 #pragma config(Motor,  mtr_S1_C2_1,     elevator,      tmotorTetrix, PIDControl, encoder)
 #pragma config(Motor,  mtr_S1_C2_2,     motorG,        tmotorTetrix, openLoop)
 #pragma config(Motor,  mtr_S1_C3_1,     rightDrive,    tmotorTetrix, PIDControl, reversed, encoder)
-#pragma config(Motor,  mtr_S1_C3_2,     goalLifter,    tmotorTetrix, PIDControl, encoder)
+#pragma config(Motor,  mtr_S1_C3_2,     goalLifter,    tmotorTetrix, PIDControl, reversed, encoder)
 #pragma config(Servo,  srvo_S1_C4_1,    score,                tServoStandard)
 #pragma config(Servo,  srvo_S1_C4_2,    autonScore,           tServoStandard)
 #pragma config(Servo,  srvo_S1_C4_3,    servo3,               tServoNone)
@@ -24,38 +24,55 @@
 #include "drivers/hitechnic-accelerometer.h";
 #include "JoystickDriver.c"  //Include file to "handle" the Bluetooth messages.
 
+
+const int retracted = 1000;
+const int lifted = 350;
+const int bottom = 0;
+
 float yaw = 0;
 float avgGyroX = 0;
+float pitch = 0;
+float avgGyroY = 0;
 
 
 void calibrateSensors() {
 		PlaySound(soundLowBuzz);
 	 	for (int i = 0; i < 1000; i ++) {
 			avgGyroX += SensorValue[yawDetector];
+			avgGyroY += SensorValue[pitchDetector];
 			wait1Msec(1);
 		}
 	avgGyroX = avgGyroX/1000;
+	avgGyroY = avgGyroY/1000;
 }
 
 
 float getTheta() {
-	wait1Msec(5);
-	yaw = yaw + ((float)SensorValue[yawDetector]-avgGyroX) * time1[T1] / 1000.0;
+	yaw += ((float)SensorValue[yawDetector]-avgGyroX) * time1[T1] / 1000.0;
 	ClearTimer(T1);
 	return (yaw);
+}
+
+float getPitch() {
+	pitch = pitch + ((float)SensorValue[pitchDetector]-avgGyroY) * time1[T1] / 1000.0;
+	ClearTimer(T1);
+	return (pitch);
 }
 
 
 void initializeRobot()
 {
   calibrateSensors();
-  //servo[score] = 0;
+  servo[score] = 158;
+  yaw = 0;
 }
 
 
 void goForward(int dist, int speed) { // PRECONDITION: dist > 0
 	nMotorEncoder[leftDrive] = 0;
-	nMotorEncoderTarget[leftDrive] = dist*120.41595354/1.5; // converts inches to ticks
+	nMotorEncoder[rightDrive] = 0;
+	nMotorEncoderTarget[leftDrive] = dist*80.27730236; // converts inches to ticks
+  nMotorEncoderTarget[rightDrive] = dist*80.27730236; // converts inches to ticks
 	motor[leftDrive] = speed;
 	motor[rightDrive] = speed;
 	while(nMotorRunState[leftDrive] != runStateIdle && nMotorRunState[rightDrive] != runStateIdle) {
@@ -90,6 +107,10 @@ void turnRight(int angle, int speed) { // PRECONDITION: angle > 0
 	}
 	motor[leftDrive] = 0;
 	motor[rightDrive] = 0;
+
+	/*if (speed >= 30)
+		turnRight(abs(getTheta()-angle), speed/2); // adjust at the end
+		*/
 }
 
 
@@ -102,6 +123,9 @@ void turnLeft(int angle, int speed) { // PRECONDITION: angle > 0
 	}
 	motor[leftDrive] = 0;
 	motor[rightDrive] = 0;
+
+	if (speed >= 30)
+		turnRight(abs(getTheta()-angle), speed/2); // adjust at the end
 }
 
 
@@ -112,26 +136,62 @@ void pivotBackOnRight(int angle, int speed) { // PRECONDITION: angle > 0 < speed
 		wait1Msec(5);
 	}
 	motor[leftDrive] = 0;
+
+	if (speed >= 30)
+		pivotBackOnRight(-abs(getTheta()-angle), -speed/2); // adjust at the end
 }
 
 
-void pivotForwardOnRight(int angle, int speed) { // PRECONDITION: angle > 0
-	yaw = 0;
-	while (getTheta() < angle) {
-		motor[leftDrive] = speed;
-		wait1Msec(5);
+void pivotForwardOnRight(int ticks, int speed) { // PRECONDITION: angle > 0
+
+	nMotorEncoder[leftDrive] = 0;
+	nMotorEncoderTarget[leftDrive] = ticks;  // converts inches to ticks
+	motor[leftDrive] = speed;
+	while (nMotorRunState[leftDrive] != runStateIdle){
 	}
 	motor[leftDrive] = 0;
+
+
+  /*
+	nMotorEncoder[leftDrive] = 0;
+	nMotorEncoderTarget[leftDrive] = ((90*(PI/180))*14)*80.27730236);  // converts inches to ticks
+	motor[leftDrive] = speed;
+	while (nMotorRunState[leftDrive] != runStateIdle){
+	}
+	motor[leftDrive] = 0;
+	*/
+
+	/*yaw = 0;
+	while (getTheta() < angle) {
+	 	motor[leftDrive] = speed;
+	}
+	motor[leftDrive] = 0;
+	/*
+	if (abs(getTheta() - angle) > 5) {
+		pivotBackOnRight(abs(getTheta()-angle), -(speed/2)); // adjust at the end
+	}
+	*/
 }
 
 
-void pivotBackOnLeft(int angle, int speed) { // PRECONDITION: angle > 0
+void pivotBackOnLeft(int ticks, int speed) { // PRECONDITION: angle > 0
+	nMotorEncoder[rightDrive] = 0;
+	nMotorEncoderTarget[rightDrive] = -ticks;  // converts inches to ticks
+	motor[rightDrive] = -speed;
+	while (nMotorRunState[rightDrive] != runStateIdle){
+	}
+	motor[leftDrive] = 0;
+/*
 	yaw = 0;
 	while (getTheta() < angle) {
 		motor[rightDrive] = -speed;
 		wait1Msec(5);
 	}
-	motor[rightDrive] = 0;
+	motor[leftDrive] = 0;
+
+	if (speed >= 30)
+		pivotBackOnLeft(-abs(getTheta()-angle), -speed/2); // adjust at the end
+		*/
 }
 
 
@@ -142,58 +202,94 @@ void pivotForwardOnLeft(int angle, int speed) { // PRECONDITION: angle > 0
 		wait1Msec(5);
 	}
 	motor[rightDrive] = 0;
+
+	if (speed >= 30)
+		pivotBackOnLeft(abs(getTheta()-angle), speed/2); // adjust at the end
 }
 
 
 void realign() { // turns the robot forward
-	if (yaw > 0) {
-		motor[rightDrive] = 30;
-		while (getTheta() > 0) {}
+	nxtDisplayCenteredTextLine(5, "%d", getTheta());
+	if (getTheta() > 5) {
+		motor[leftDrive] = -15;
+		while (getTheta() > 5) {}
 		motor[rightDrive] = 0;
 	}
-	else if (yaw < 0) {
-		motor[leftDrive] = 30;
-		while (getTheta() < 0) {}
-		motor[leftDrive] = 0;
+	else if (getTheta() < 5) {
+		motor[rightDrive] = -15;
+		while (getTheta() < 5) {}
+		motor[rightDrive] = 0;
 	}
 	yaw = 0;
+	PlaySound(soundBlip);
 }
 
 
-void dropLifter() {
-	nMotorEncoder[goalLifter] = 1440;
-	nMotorEncoderTarget[goalLifter] = 0;
-	motor[goalLifter] = -50;
-	while(nMotorRunState[goalLifter] != runStateIdle) {}
+void deployLifter() {
+	nMotorEncoder[goalLifter] = bottom;
+	while(nMotorEncoder[goalLifter] > -retracted) {
+		motor[goalLifter] = -50;
+	}
+	motor[goalLifter] = 0;
+	nMotorEncoder[goalLifter] = bottom;
+}
+
+
+void undeployLifter() {
+	while(nMotorEncoder[goalLifter] < retracted) {
+		motor[goalLifter] = 50;
+	}
 	motor[goalLifter] = 0;
 }
 
 
 void pickUpGoal() {
-	nMotorEncoder[goalLifter] = 0;
-	nMotorEncoderTarget[goalLifter] = 100;
-	motor[goalLifter] = 30;
-	while(nMotorRunState[goalLifter] != runStateIdle) {}
+	while(nMotorEncoder[goalLifter] < lifted) {
+		motor[goalLifter] = 30;
+	}
 	motor[goalLifter] = 0;
 }
 
 
 void putDownGoal() {
-	nMotorEncoder[goalLifter] = 100;
-	nMotorEncoderTarget[goalLifter] = 0;
-	motor[goalLifter] = -30;
-	while(nMotorRunState[goalLifter] != runStateIdle) {}
+	while(nMotorEncoder[goalLifter] > bottom) {
+		motor[goalLifter] = -30;
+	}
 	motor[goalLifter] = 0;
+}
+
+
+void swerveBackwardWhileDeployingLifter() { // 52 is the distance
+	nMotorEncoder[goalLifter] = bottom;
+	nMotorEncoder[leftDrive] = 0;
+	nMotorEncoder[rightDrive] = 0;
+	nMotorEncoderTarget[leftDrive] = 52*80.27730236; // converts inches to ticks
+	nMotorEncoderTarget[rightDrive] = 52*80.27730236; // converts inches to ticks
+	motor[leftDrive] = -50;
+	motor[rightDrive] = -50;
+	while(nMotorEncoder[goalLifter] > -retracted && nMotorRunState[leftDrive] != runStateIdle && nMotorRunState[rightDrive] != runStateIdle) {
+		motor[goalLifter] = -50;
+	}
+	motor[goalLifter] = 0;
+	while(nMotorRunState[leftDrive] != runStateIdle && nMotorRunState[rightDrive] != runStateIdle) {
+		getTheta();
+	}
+	motor[rightDrive] = 0;
+	motor[leftDrive] = 0;
+	nMotorEncoder[goalLifter] = bottom;
 }
 
 
 void findIR() {
 	for (int i = 0; i < 3; i ++) {
-  	if (SensorValue[irDetector] == 5)
-	  	return;
-  	goBackward(12, 50);
-  	pivotBackOnLeft(45, 50);
-  	goBackward(8, 50);
+  	if (SensorValue[irDetector] == 5) {
+  		PlaySound(soundUpwardTones);
+  		return;
+	  }
+	  PlaySound(soundBeepBeep);
+  	goBackward(8, 35);
+  	pivotBackOnLeft(1250, 50);
+  	goBackward(14, 35);
   }
 
   PlaySound(soundException); // if it doesn't find it, cry out in agony
@@ -212,11 +308,10 @@ void scoreMedium() {
 }
 
 
-void scoreCenter() {
+void scoreTall() {
 	motor[elevator] = 80;
-	wait1Msec(300);
+	wait1Msec(500);
 	motor[elevator] = 0;
-	servo[autonScore] = 0;
 	servo[score] = 100;
 	wait1Msec(1000);
 	servo[score] = 0;
@@ -225,16 +320,90 @@ void scoreCenter() {
 }
 
 
+void scoreCenter() {
+	motor[elevator] = 100;
+	wait1Msec(1000);
+	motor[elevator] = 0;
+	servo[autonScore] = 0;
+	servo[score] = 100;
+	wait1Msec(1000);
+	servo[score] = 0;
+	motor[elevator] = -15;
+	wait1Msec(200);
+	motor[elevator] = 0;
+}
+
+
+int getOffRamp(int speed) {
+	nMotorEncoder[rightDrive] = 0;
+	nMotorEncoder[leftDrive] = 0;
+	motor[rightDrive] = -speed;
+	motor[leftDrive] = -speed;
+	while(abs(getPitch()) < 10 || (nMotorEncoder[leftDrive] >= (22*80.27730236) && nMotorEncoder[rightDrive] >= (22*80.27730236))) {
+	}
+	PlaySound(soundDownwardTones);
+	while(abs(getPitch()) > 0 || (nMotorEncoder[leftDrive] >= (36*80.27730236) && nMotorEncoder[rightDrive] >= (36*80.27730236))) {
+	}
+	PlaySound(soundFastUpwardTones);
+	motor[rightDrive] = 0;
+	motor[leftDrive] = 0;
+	return nMotorEncoder[leftDrive];
+}
+
+
+void getOffRampAndGetGoal() {
+	nMotorEncoder[leftDrive] = 0;
+	nMotorEncoder[rightDrive] = 0;
+	motor[leftDrive] = -50;
+	motor[rightDrive] = -50;
+	while (abs(nMotorEncoder[leftDrive]) < 4174) {}
+	PlaySound(soundBeepBeep);
+	nMotorEncoder[goalLifter] = 0;
+	motor[goalLifter] = -50;
+	while(abs(nMotorEncoder[leftDrive]) < 8028 && abs(nMotorEncoder[rightDrive]) < 8028) {
+		if (nMotorEncoder[goalLifter] <= -retracted) {
+			motor[goalLifter] = 0;
+		}
+		motor[rightDrive] = -50;
+		motor[leftDrive] = -50;
+	}
+	motor[leftDrive] = 0;
+	motor[rightDrive] = 0;
+	nMotorEncoder[goalLifter] = bottom;
+}
+
+
+void stopMotors() {
+	motor[rightDrive] = 0;
+	motor[leftDrive] = 0;
+}
+
+
 void runAutonomous() { // runs second half of SMITTY-AP (from the parking zone)
-	goForward(60, 50);
-	pivotBackOnRight(90, 50);
-	goBackward(12, 50);
+	goForward(24, 50);
+	/*pivotForwardOnRight(18, 40);
+	pivotForwardOnRight(18, 40);
+	pivotForwardOnRight(18, 40);
+	pivotForwardOnRight(18, 40);
+	pivotForwardOnRight(18, 40);*/
+
+	pivotForwardOnRight(2300, 50);
+	stopMotors();
+	goBackward(18, 40);
 	findIR();
-	turnRight(90, 50);
+	goBackward(3, 30);
+	turnRight(75, 50);
 	//scoreCenter();
+	turnLeft(75, 50);
+	goForward(4, 40);
+	pivotForwardOnRight(2300, 50);
+	goBackward(36, 100);
+
+
+	/*
 	wait1Msec(2000);
 	turnLeft(90, 50);
-	goForward(8, 50);
+	goForward(30, 50);
 	turnLeft(90, 50);
 	while (true) {
 		goForward(24, 100);
@@ -242,6 +411,7 @@ void runAutonomous() { // runs second half of SMITTY-AP (from the parking zone)
 		goBackward(24, 100);
 		PlaySound(soundDownwardTones);
 	}
+	*/
 }
 
 

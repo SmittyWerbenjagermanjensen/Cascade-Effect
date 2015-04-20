@@ -7,7 +7,7 @@
 #pragma config(Motor,  motorC,           ,             tmotorNXT, openLoop)
 #pragma config(Motor,  mtr_S1_C1_1,     leftDrive,     tmotorTetrix, PIDControl, encoder)
 #pragma config(Motor,  mtr_S1_C1_2,     mainIntake,    tmotorTetrix, openLoop)
-#pragma config(Motor,  mtr_S1_C2_1,     elevator,      tmotorTetrix, PIDControl, encoder)
+#pragma config(Motor,  mtr_S1_C2_1,     elevator,      tmotorTetrix, PIDControl)
 #pragma config(Motor,  mtr_S1_C2_2,     motorG,        tmotorTetrix, openLoop)
 #pragma config(Motor,  mtr_S1_C3_1,     rightDrive,    tmotorTetrix, PIDControl, reversed, encoder)
 #pragma config(Motor,  mtr_S1_C3_2,     goalLifter,    tmotorTetrix, PIDControl, reversed, encoder)
@@ -24,17 +24,17 @@ task main()
 	//motor[mainIntake] = -30;
 	while (true) {
 		if (nNxtButtonPressed == 1) {
-			motor[goalLifter] = 75;
+			motor[elevator] = 35;
 			/*motor[rightDrive] = 35;
 			motor[leftDrive] = 35;
 			wait1Msec(2000);
 			*/
 		}
 		else if (nNxtButtonPressed == 2) {
-			motor[goalLifter] = -75;
+			motor[elevator] = -15;
 		}
 		else {
-			motor[goalLifter] = 0;
+			motor[elevator] = 0;
 		}
 	}
 }

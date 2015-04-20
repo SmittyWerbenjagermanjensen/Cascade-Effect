@@ -8,7 +8,7 @@
 #pragma config(Motor,  motorC,           ,             tmotorNXT, openLoop)
 #pragma config(Motor,  mtr_S1_C1_1,     leftDrive,     tmotorTetrix, PIDControl, encoder)
 #pragma config(Motor,  mtr_S1_C1_2,     mainIntake,    tmotorTetrix, openLoop)
-#pragma config(Motor,  mtr_S1_C2_1,     elevator,      tmotorTetrix, PIDControl, encoder)
+#pragma config(Motor,  mtr_S1_C2_1,     elevator,      tmotorTetrix, openLoop)
 #pragma config(Motor,  mtr_S1_C2_2,     motorG,        tmotorTetrix, openLoop)
 #pragma config(Motor,  mtr_S1_C3_1,     rightDrive,    tmotorTetrix, PIDControl, reversed, encoder)
 #pragma config(Motor,  mtr_S1_C3_2,     goalLifter,    tmotorTetrix, PIDControl, reversed, encoder)
@@ -25,8 +25,9 @@
 #include "JoystickDriver.c"  //Include file to "handle" the Bluetooth messages.
 
 
-const int retracted = 1000;
-const int lifted = 350;
+const int retracted = 1175;
+const int lifted = 325;
+const int partialLifted = 75;
 const int bottom = 0;
 
 float yaw = 0;
@@ -42,13 +43,13 @@ void calibrateSensors() {
 			avgGyroY += SensorValue[pitchDetector];
 			wait1Msec(1);
 		}
+	ClearTimer(T1);
 	avgGyroX = avgGyroX/1000;
 	avgGyroY = avgGyroY/1000;
 }
 
 
 float getTheta() {
-	wait1Msec(5);
 	yaw = yaw + ((float)SensorValue[yawDetector]-avgGyroX) * time1[T1] / 1000.0;
 	ClearTimer(T1);
 	return (yaw);
@@ -65,7 +66,8 @@ float getPitch() {
 void initializeRobot()
 {
   calibrateSensors();
-  servo[score] = 158;
+  servo[score] = 162;
+  servo[autonScore] = 100;
   yaw = 0;
 }
 
@@ -183,16 +185,17 @@ void realign() { // turns the robot forward
 
 void deployLifter() {
 	nMotorEncoder[goalLifter] = bottom;
-	while(nMotorEncoder[goalLifter] > -retracted) {
+	ClearTimer(T2);
+	while(nMotorEncoder[goalLifter] > -retracted && time1[T2] < 1500) {
 		motor[goalLifter] = -50;
 	}
 	motor[goalLifter] = 0;
 	nMotorEncoder[goalLifter] = bottom;
 }
 
-
 void undeployLifter() {
-	while(nMotorEncoder[goalLifter] < retracted) {
+	ClearTimer(T2);
+	while(nMotorEncoder[goalLifter] < retracted && time1[T2] < 1500) {
 		motor[goalLifter] = 50;
 	}
 	motor[goalLifter] = 0;
@@ -200,7 +203,8 @@ void undeployLifter() {
 
 
 void pickUpGoal() {
-	while(nMotorEncoder[goalLifter] < lifted) {
+	ClearTimer(T2);
+	while(nMotorEncoder[goalLifter] < lifted && time1[T2] < 1000) {
 		motor[goalLifter] = 30;
 	}
 	motor[goalLifter] = 0;
@@ -209,7 +213,8 @@ void pickUpGoal() {
 
 
 void putDownGoal() {
-	while(nMotorEncoder[goalLifter] > bottom) {
+	ClearTimer(T2);
+	while(nMotorEncoder[goalLifter] > bottom && time1[T2] < 1000 ) {
 		motor[goalLifter] = -30;
 	}
 	motor[goalLifter] = 0;
@@ -251,38 +256,44 @@ void findIR() {
 
 
 void scoreMedium() {
-	motor[elevator] = 80;
-	wait1Msec(500);
+	motor[elevator] = 100;
+	wait1Msec(1250);
 	motor[elevator] = 0;
-	servo[score] = 100;
-	wait1Msec(1000);
-	servo[score] = 0;
-	motor[elevator] = -50;
+	wait1Msec(100);
+	servo[autonScore] = 250;
+	wait1Msec(500);
+	servo[score] = 127;
+	wait1Msec(1500);
+	servo[autonScore] = 100;
+	motor[elevator] = -10;
 	wait1Msec(200);
+	motor[elevator] = 0;
 }
 
 
 void scoreTall() {
 	motor[elevator] = 80;
-	wait1Msec(500);
+	wait1Msec(100);
 	motor[elevator] = 0;
-	servo[score] = 100;
+	servo[autonScore] = 127;
+	servo[score] = 243;
 	wait1Msec(1000);
-	servo[score] = 0;
-	motor[elevator] = -50;
-	wait1Msec(200);
+	servo[score] = 158;
+	motor[elevator] = -15;
+	wait1Msec(100);
+	motor[elevator] = 0;
 }
 
 
 void scoreCenter() {
-	motor[elevator] = 80;
+	//motor[elevator] = 80;
 	wait1Msec(300);
-	motor[elevator] = 0;
+	//motor[elevator] = 0;
 	servo[autonScore] = 0;
 	servo[score] = 100;
 	wait1Msec(1000);
 	servo[score] = 0;
-	motor[elevator] = -50;
+	//motor[elevator] = -50;
 	wait1Msec(200);
 }
 
@@ -303,61 +314,107 @@ int getOffRamp(int speed) {
 	return nMotorEncoder[leftDrive];
 }
 
+void gyroTurn(int targetDegrees, int speed) {
+	if (getTheta() < targetDegrees) {
+		motor[leftDrive] = speed;
+	}
+	else {
+		motor[leftDrive] = -speed;
+	}
+	while (getTheta() < targetDegrees-1 || getTheta() > targetDegrees) {
+	}
+	motor[leftDrive] = 0;
+	motor[rightDrive] = 0;
+	if (speed >= 10) {
+		gyroTurn(targetDegrees, speed/2);
+	}
+}
 
 void getOffRampAndGetGoal() {
-	nMotorEncoder[leftDrive] = 0;
+	/*nMotorEncoder[leftDrive] = 0;
 	nMotorEncoder[rightDrive] = 0;
-	motor[leftDrive] = -50;
-	motor[rightDrive] = -50;
-	while (abs(nMotorEncoder[leftDrive]) < 4174) {}
+	motor[leftDrive] = -30;
+	motor[rightDrive] = -30;
+	while (abs(nMotorEncoder[leftDrive]) < 4600) {}
 	PlaySound(soundBeepBeep);
+	motor[leftDrive] = 0;
+	while (abs(nMotorEncoder[rightDrive]) < 4600) {}
+	motor[rightDrive] = 0;
+	//gyroTurn(5, 10);*/
 	nMotorEncoder[goalLifter] = 0;
-	motor[goalLifter] = -50;
-	while(abs(nMotorEncoder[leftDrive]) < 8028 && abs(nMotorEncoder[rightDrive]) < 8028) {
+	//motor[goalLifter] = -50;
+	nMotorEncoderTarget[leftDrive] = 3800;
+	nMotorEncoderTarget[rightDrive] = 3800;
+	motor[leftDrive] = -32;
+	motor[rightDrive] = -32;
+	motor[goalLifter] = -35;
+	bool isRetracted = false;
+	ClearTimer(T2);
+	while((nMotorRunState[leftDrive] != runStateIdle && nMotorRunState[rightDrive] != runStateIdle) || time1[T2] < 500) {
 		if (nMotorEncoder[goalLifter] <= -retracted) {
 			motor[goalLifter] = 0;
+			nMotorEncoder[goalLifter] = bottom;
+			isRetracted = true;
 		}
-		if ((time100[T4]/3)%2 == 0) {
-			motor[rightDrive] = -30;
-			motor[leftDrive] = -80;
-		}
-		else {
-			motor[rightDrive] = -80;
-			motor[leftDrive] = -30;
+
+	 if ((abs(nMotorEncoder[leftDrive]) > 3600 || abs(nMotorEncoder[rightDrive]) > 3600) && isRetracted) {
+			if (nMotorEncoder[goalLifter] <= partialLifted) {
+				motor[goalLifter] = 35;
+			}
+			else {
+				motor[goalLifter] = 0;
+			}
 		}
 	}
 	motor[leftDrive] = 0;
 	motor[rightDrive] = 0;
+	motor[goalLifter] = 0;
 	nMotorEncoder[goalLifter] = bottom;
+}
+
+
+void align() {
+	turnLeft(75, 30);
+	motor[leftDrive] = 30;
+	motor[rightDrive] = 30;
+	wait1Msec(2000);
+	yaw = 0;
+	wait1Msec(200);
+	goBackward(2, 30);
+	turnRight(83, 30);
+	wait1Msec(200);
+	gyroTurn(81, 10);
 }
 
 
 void runAutonomous() { // scores over 200 pts for autonomous
 	/*goBackwardCoast(58, 50);
 	//realign();
-	swerveBackwardWhileDeployingLifter();
+	swerveBackwardWhileDeployingLifter();s
 	*/
+	goBackward(63, 50);
+	align();
 	getOffRampAndGetGoal();
 	pickUpGoal();
+	scoreMedium();
+	wait1Msec(100);
 	pivotForwardOnRight(25, 50);
-	//scoreMedium();
-	goForward(24, 50);
-	turnRight(160, 50);
-	/*wait1Msec(10000);
-	turnLeft(100, 30);
-	goBackward(10, 50);
-	putDownGoal();
-	goForward(10, 50);
-	turnRight(100, 30);
+	goForward(100, 50);
+	turnRight(140, 50);
+	//putDownGoal();
+	while (true) {
+	}
+	goForward(4, 50);
+	pivotForwardOnLeft(35, 50);
+	turnRight(140, 30);
+	goBackward(3, 30);
 	goBackward(10, 50);
 	pickUpGoal();
-	//scoreTall();
-	pivotForwardOnRight(28, 40);
+	scoreTall();
 	goForward(100, 50);
 	turnRight(152, 40);
 	putDownGoal();
 	goForward(12, 50);
-	undeployLifter();*/
 }
 
 

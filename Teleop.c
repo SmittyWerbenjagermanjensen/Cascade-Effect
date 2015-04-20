@@ -25,7 +25,7 @@
 
 const int raised = 100; // the encoder reading when the goal is raised
 const int lowered = 0; // the encoder reading when it is lowered
-const int scored = 253; // the servo value for an open trough
+const int scored = 243; // the servo value for an open trough
 const int unscored = 158; // the value for a closed goal
 
 int intakeDir = 0;

@@ -8,7 +8,7 @@
 #pragma config(Motor,  motorC,           ,             tmotorNXT, openLoop)
 #pragma config(Motor,  mtr_S1_C1_1,     leftDrive,     tmotorTetrix, PIDControl, encoder)
 #pragma config(Motor,  mtr_S1_C1_2,     mainIntake,    tmotorTetrix, openLoop)
-#pragma config(Motor,  mtr_S1_C2_1,     elevator,      tmotorTetrix, PIDControl, encoder)
+#pragma config(Motor,  mtr_S1_C2_1,     elevator,      tmotorTetrix, PIDControl)
 #pragma config(Motor,  mtr_S1_C2_2,     motorG,        tmotorTetrix, openLoop)
 #pragma config(Motor,  mtr_S1_C3_1,     rightDrive,    tmotorTetrix, PIDControl, reversed, encoder)
 #pragma config(Motor,  mtr_S1_C3_2,     goalLifter,    tmotorTetrix, PIDControl, reversed, encoder)
@@ -25,9 +25,11 @@
 #include "JoystickDriver.c"  //Include file to "handle" the Bluetooth messages.
 
 
-const int retracted = 1000;
+const int retracted = 1200;
 const int lifted = 350;
 const int bottom = 0;
+
+int goalPos = 1;
 
 float yaw = 0;
 float avgGyroX = 0;
@@ -36,12 +38,14 @@ float avgGyroY = 0;
 
 
 void calibrateSensors() {
-		PlaySound(soundLowBuzz);
+
+PlaySound(soundLowBuzz);
 	 	for (int i = 0; i < 1000; i ++) {
 			avgGyroX += SensorValue[yawDetector];
 			avgGyroY += SensorValue[pitchDetector];
 			wait1Msec(1);
 		}
+	ClearTimer(T1);
 	avgGyroX = avgGyroX/1000;
 	avgGyroY = avgGyroY/1000;
 }
@@ -63,10 +67,27 @@ float getPitch() {
 void initializeRobot()
 {
   calibrateSensors();
-  servo[score] = 158;
+  //servo[score] = 234;
+  servo[autonScore] = 100;
+  servo[score] = 212;
   yaw = 0;
 }
 
+void gyroTurn(int targetDegrees, int speed) {
+	if (getTheta() < targetDegrees) {
+		motor[leftDrive] = speed;
+	}
+	else {
+		motor[leftDrive] = -speed;
+	}
+	while (getTheta() < targetDegrees-1 || getTheta() > targetDegrees) {
+	}
+	motor[leftDrive] = 0;
+	motor[rightDrive] = 0;
+	if (speed >= 10) {
+		gyroTurn(targetDegrees, speed/2);
+	}
+}
 
 void goForward(int dist, int speed) { // PRECONDITION: dist > 0
 	nMotorEncoder[leftDrive] = 0;
@@ -76,7 +97,6 @@ void goForward(int dist, int speed) { // PRECONDITION: dist > 0
 	motor[leftDrive] = speed;
 	motor[rightDrive] = speed;
 	while(nMotorRunState[leftDrive] != runStateIdle && nMotorRunState[rightDrive] != runStateIdle) {
-		getTheta();
 	}
 	motor[leftDrive] = 0;
 	motor[rightDrive] = 0;
@@ -113,6 +133,17 @@ void turnRight(int angle, int speed) { // PRECONDITION: angle > 0
 		*/
 }
 
+void gyroTurnRight(int angle, int speed) { // PRECONDITION: angle > 0
+	yaw = 0;
+	while (getTheta() < angle) {
+		motor[leftDrive] = speed;
+		motor[rightDrive] = -speed;
+		wait1Msec(5);
+	}
+	motor[leftDrive] = 0;
+	motor[rightDrive] = 0;
+	gyroTurn(angle, 10);
+}
 
 void turnLeft(int angle, int speed) { // PRECONDITION: angle > 0
 	yaw = 0;
@@ -123,34 +154,31 @@ void turnLeft(int angle, int speed) { // PRECONDITION: angle > 0
 	}
 	motor[leftDrive] = 0;
 	motor[rightDrive] = 0;
-
+	/*
 	if (speed >= 30)
 		turnRight(abs(getTheta()-angle), speed/2); // adjust at the end
-}
-
-
-void pivotBackOnRight(int angle, int speed) { // PRECONDITION: angle > 0 < speed
-	yaw = 0;
-	while (-getTheta() < angle) {
-		motor[leftDrive] = -speed;
-		wait1Msec(5);
-	}
-	motor[leftDrive] = 0;
-
-	if (speed >= 30)
-		pivotBackOnRight(-abs(getTheta()-angle), -speed/2); // adjust at the end
+		*/
 }
 
 
 void pivotForwardOnRight(int ticks, int speed) { // PRECONDITION: angle > 0
-
 	nMotorEncoder[leftDrive] = 0;
 	nMotorEncoderTarget[leftDrive] = ticks;  // converts inches to ticks
 	motor[leftDrive] = speed;
 	while (nMotorRunState[leftDrive] != runStateIdle){
 	}
 	motor[leftDrive] = 0;
+}
 
+	void gyroPivotForwardOnRight(int angle, int speed) { // PRECONDITION: angle > 0
+	yaw = 0;
+	while (getTheta() < angle) {
+		motor[leftDrive] = speed;
+		wait1Msec(5);
+	}
+	motor[leftDrive] = 0;
+	gyroTurn(angle, 10);
+}
 
   /*
 	nMotorEncoder[leftDrive] = 0;
@@ -170,8 +198,8 @@ void pivotForwardOnRight(int ticks, int speed) { // PRECONDITION: angle > 0
 	if (abs(getTheta() - angle) > 5) {
 		pivotBackOnRight(abs(getTheta()-angle), -(speed/2)); // adjust at the end
 	}
-	*/
-}
+
+}*/
 
 
 void pivotBackOnLeft(int ticks, int speed) { // PRECONDITION: angle > 0
@@ -192,19 +220,6 @@ void pivotBackOnLeft(int ticks, int speed) { // PRECONDITION: angle > 0
 	if (speed >= 30)
 		pivotBackOnLeft(-abs(getTheta()-angle), -speed/2); // adjust at the end
 		*/
-}
-
-
-void pivotForwardOnLeft(int angle, int speed) { // PRECONDITION: angle > 0
-	yaw = 0;
-	while (-getTheta() < angle) {
-		motor[rightDrive] = speed;
-		wait1Msec(5);
-	}
-	motor[rightDrive] = 0;
-
-	if (speed >= 30)
-		pivotBackOnLeft(abs(getTheta()-angle), speed/2); // adjust at the end
 }
 
 
@@ -279,17 +294,38 @@ void swerveBackwardWhileDeployingLifter() { // 52 is the distance
 	nMotorEncoder[goalLifter] = bottom;
 }
 
+void straightenForCascade() {
+	switch(goalPos) {
+		case 1:
+			//gyroTurn(-65, 10);
+		break;
+
+		case 2:
+			gyroTurn(-74, 10);
+		break;
+
+		case 3:
+			gyroTurn(-82, 10);
+		break;
+	}
+}
 
 void findIR() {
-	for (int i = 0; i < 3; i ++) {
+	for (int i = 0; i < 2; i ++) {
+		if (goalPos == 2) {
+			goBackward(4, 35);
+		}
   	if (SensorValue[irDetector] == 5) {
-  		PlaySound(soundUpwardTones);
+  		//PlaySound(soundUpwardTones);
   		return;
 	  }
+	  goalPos++;
+	  wait1Msec(100);
 	  PlaySound(soundBeepBeep);
-  	goBackward(8, 35);
-  	pivotBackOnLeft(1250, 50);
-  	goBackward(14, 35);
+  	goBackward(18, 35);
+  	pivotBackOnLeft(1250, 65);
+  	goBackward(4, 35);
+  	wait1Msec(100);
   }
 
   PlaySound(soundException); // if it doesn't find it, cry out in agony
@@ -297,39 +333,51 @@ void findIR() {
 
 
 void scoreMedium() {
-	motor[elevator] = 80;
+//	motor[elevator] = 80;
 	wait1Msec(500);
-	motor[elevator] = 0;
+//	motor[elevator] = 0;
 	servo[score] = 100;
 	wait1Msec(1000);
 	servo[score] = 0;
-	motor[elevator] = -50;
+//	motor[elevator] = -50;
 	wait1Msec(200);
 }
 
 
 void scoreTall() {
-	motor[elevator] = 80;
+//	motor[elevator] = 80;
 	wait1Msec(500);
-	motor[elevator] = 0;
+//	motor[elevator] = 0;
 	servo[score] = 100;
 	wait1Msec(1000);
 	servo[score] = 0;
-	motor[elevator] = -50;
+//	motor[elevator] = -50;
 	wait1Msec(200);
 }
 
 
 void scoreCenter() {
 	motor[elevator] = 100;
-	wait1Msec(1000);
+	wait1Msec(3000);
 	motor[elevator] = 0;
-	servo[autonScore] = 0;
-	servo[score] = 100;
-	wait1Msec(1000);
-	servo[score] = 0;
-	motor[elevator] = -15;
-	wait1Msec(200);
+	for (int i = 0; i < 3; i++) {
+		wait1Msec(400);
+		motor[elevator] = 100;
+		wait1Msec(250);
+		motor[elevator] = 0;
+	}
+		//servo[autonScore] = 127;
+	wait1Msec(100);
+	goBackward(7, 25);
+	servo[autonScore] = 250;
+	wait1Msec(500);
+	servo[score] = 127;
+	wait1Msec(1500);
+	servo[autonScore] = 100;
+	goForward(7, 25);
+	//servo[score] = \158;
+	motor[elevator] = -10;
+	wait1Msec(750);
 	motor[elevator] = 0;
 }
 
@@ -380,24 +428,44 @@ void stopMotors() {
 
 
 void runAutonomous() { // runs second half of SMITTY-AP (from the parking zone)
-	goForward(24, 50);
-	/*pivotForwardOnRight(18, 40);
-	pivotForwardOnRight(18, 40);
-	pivotForwardOnRight(18, 40);
-	pivotForwardOnRight(18, 40);
-	pivotForwardOnRight(18, 40);*/
-
-	pivotForwardOnRight(2300, 50);
-	stopMotors();
-	goBackward(18, 40);
+	goForward(20, 35);
+	pivotForwardOnRight(2475, 40);
+	//gyroPivotForwardOnRight(90, 50);
+	goBackward(15, 40);
 	findIR();
-	goBackward(3, 30);
-	turnRight(75, 50);
-	//scoreCenter();
-	turnLeft(75, 50);
-	goForward(4, 40);
-	pivotForwardOnRight(2300, 50);
-	goBackward(36, 100);
+	if (goalPos == 2) {
+		goBackward(7, 30);
+	}
+	else if (goalPos == 3) {
+		goBackward(7, 30);
+	}
+	else {
+		goBackward(11, 30);
+	}
+	//gyroTurnRight(90, 50);
+	turnRight(80, 50);
+	wait1Msec(200);
+	motor[leftDrive] = -35;
+	motor[rightDrive] = -35;
+	wait1Msec(1500);
+	motor[leftDrive] = 0;
+	motor[rightDrive] = 0;
+	wait1Msec(100);
+	goForward(9, 25);
+	scoreCenter();
+	//PlaySound(soundLowBuzz);
+	wait1Msec(100);
+	turnLeft(70, 50);
+	goForward(10, 40);
+	pivotForwardOnRight(2000, 65);
+	straightenForCascade();
+
+	for (int i = 0; i < 1; i++) {
+		goBackward(40, 100);
+		goForward(36, 100);
+	}
+
+	//deployLifter();
 
 
 	/*
@@ -419,7 +487,8 @@ task main()
 {
   initializeRobot();
 
-  //waitForStart(); // Wait for the beginning of autonomous phase.
+  waitForStart(); // Wait for the beginning of autonomous phase.
+  PlaySound(soundBeepBeep);
 
   runAutonomous();
 
